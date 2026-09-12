@@ -28,11 +28,12 @@ class SwitchyardRouter:
 
     def __init__(
         self,
-        local_vlm_url: str = "http://<REMOTE_HOST_IP>:8090/v1",
-        p330_host: str = "<REMOTE_HOST_IP>"
+        local_vlm_url: Optional[str] = None,
+        p330_host: Optional[str] = None
     ):
-        self.local_vlm_url = local_vlm_url
-        self.p330_host = p330_host
+        from tools.infrastructure.config import settings
+        self.p330_host = p330_host or os.environ.get("P330_IP_ADDRESS") or getattr(settings, "P330_IP_ADDRESS", "127.0.0.1")
+        self.local_vlm_url = local_vlm_url or os.environ.get("LOCAL_VLM_URL") or f"http://{self.p330_host}:8090/v1"
 
         # Telemetry state
         self.total_requests: int = 0

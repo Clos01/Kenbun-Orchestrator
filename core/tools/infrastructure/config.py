@@ -107,7 +107,11 @@ class KenbunSettings(BaseSettings):
     DEV_ROOT: Path = Field(default_factory=lambda: Path.home() / "Dev")
     BRAIN_HEALTH_DIR: Path = Field(default_factory=lambda: get_project_root() / "brain_health")
     FRONTEND_URL: str = Field(default="http://localhost:3000")
-    MASTER_KEY_PATH: Path = Field(default_factory=lambda: Path.home() / ".gemini" / "antigravity" / "keys" / ".kenbun_master.key")
+    MASTER_KEY_PATH: Path = Field(default_factory=lambda: (
+        Path.home() / ".kenbun" / "keys" / ".kenbun_master.key"
+        if (Path.home() / ".kenbun" / "keys" / ".kenbun_master.key").exists() or not (Path.home() / ".gemini" / "antigravity" / "keys" / ".kenbun_master.key").exists()
+        else Path.home() / ".gemini" / "antigravity" / "keys" / ".kenbun_master.key"
+    ))
     OLD_MASTER_KEY_PATH: Path = Field(default_factory=lambda: Path.home() / ".gemini" / "antigravity" / "keys" / ".antigravity_master.key")
     OBSIDIAN_VAULT_PATH: Optional[Path] = None
     CODEX_HOME: Path = Field(default_factory=lambda: Path.home() / ".codex")

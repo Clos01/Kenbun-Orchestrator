@@ -22,16 +22,21 @@ logger = logging.getLogger("tools.memory.feedback_store")
 class FeedbackKnowledgeStore:
     """Triple-Memory storage and semantic retrieval engine for client video feedback."""
 
-    def __init__(self, db_path: Optional[str] = None, chroma_host: str = "http://localhost:8000"):
+    def __init__(self, db_path: Optional[str] = None, chroma_host: Optional[str] = None):
+        from tools.infrastructure.config import settings
+        from tools.utils.path_utils import get_project_root
+
         if not db_path:
-            repo_root = Path(__file__).resolve().parent.parent.parent.parent
+            repo_root = get_project_root()
             data_dir = repo_root / "data"
             data_dir.mkdir(parents=True, exist_ok=True)
             self.db_path = str(data_dir / "feedback_intelligence.db")
         else:
             self.db_path = db_path
 
-        self.chroma_host = chroma_host
+        c_host = chroma_host or os.environ.get("CHROMA_HOST", getattr(settings, "CHROMA_HOST", "localhost"))
+        c_port = os.environ.get("CHROMA_PORT", getattr(settings, "CHROMA_PORT", 8000))
+        self.chroma_host = chroma_host or (c_host if "://" in str(c_host) else f"http://{c_host}:{c_port}")
         self._init_sqlite()
 
     def _init_sqlite(self):

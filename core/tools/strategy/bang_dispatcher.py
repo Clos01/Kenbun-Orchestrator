@@ -17,6 +17,26 @@ BANG_DIRECTIVES = {
     "!code_review": "code_review",
     "!design_ui": "design_ui",
     "!wireframe": "wireframe",
+    "!diagnose": "consult_code_diagnostician",
+    "!code_diagnostician": "consult_code_diagnostician",
+    "!mec": "consult_code_diagnostician",
+    "!cluster": "consult_cluster_monitor",
+    "!cluster_monitor": "consult_cluster_monitor",
+    "!pit": "consult_cluster_monitor",
+    "!perf": "consult_performance_tuner",
+    "!performance": "consult_performance_tuner",
+    "!performance_tuner": "consult_performance_tuner",
+    "!dyno": "consult_performance_tuner",
+    "!protocol": "consult_framing_sentinel",
+    "!framing": "consult_framing_sentinel",
+    "!framing_sentinel": "consult_framing_sentinel",
+    "!wire": "consult_framing_sentinel",
+    "!leak_audit": "consult_leak_sentinel",
+    "!leak_sentinel": "consult_leak_sentinel",
+    "!sec": "consult_leak_sentinel",
+    "!history": "consult_memory_archivist",
+    "!memory_archivist": "consult_memory_archivist",
+    "!doc": "consult_memory_archivist",
     "!help": "help",
 }
 
@@ -26,6 +46,12 @@ Single-token directives to immediately invoke Kenbun core capabilities:
 
 | Directive | Target Workflow / System | Example Usage |
 |---|---|---|
+| `!diagnose <issue> [file]` | System 2 Local Coder (Qwen 2.5 Coder 14B on LG 2025) | `!diagnose "Async race condition on shutdown"` |
+| `!cluster` | Cluster Hardware Nodes & Background Task Monitor | `!cluster` |
+| `!perf [tool]` | Bayesian Tool Confidence & Win-Rate Tuner | `!perf replace_file_content` |
+| `!protocol` | FastMCP Protocol & Stdout Framing Isolation Auditor | `!protocol` |
+| `!leak_audit [path]` | Zero-Leak Security & Secret Sentinel | `!leak_audit core/` |
+| `!history <query>` | Post-Mortem & Hivemind Memory Archivist | `!history "telemetry"` |
 | `!Supervisor <task> [code]` | System 2 Architecture & Audit | `!Supervisor "Audit connection pool" "with get_connection(): pass"` |
 | `!Orchestrate <workflow> <task>` | Kenbun Pipeline Dispatch | `!Orchestrate bug_fix "Resolve memory leak"` |
 | `!timesfm <task>` | Google TimesFM-3 Dynamic Predictive Pipeline | `!timesfm "Fix websocket timeout"` |
@@ -116,7 +142,56 @@ def dispatch_bang_command(cmd_str: str) -> str:
         except Exception as e:
             return f"❌ !Orchestrate dispatch failed: {e}"
 
-    # 3. Direct Workflow Shortcuts
+    # 3. Functional Specialists Direct Bang Execution
+    if directive in ("!diagnose", "!code_diagnostician", "!mec"):
+        try:
+            from tools.specialists.pit_crew import consult_code_diagnostician
+            parts = shlex.split(payload) if payload else []
+            issue = parts[0] if parts else (payload or "General diagnostic request")
+            target_file = parts[1] if len(parts) > 1 else None
+            return consult_code_diagnostician(issue=issue, target_file=target_file)
+        except Exception as e:
+            return f"❌ {directive} dispatch failed: {e}"
+
+    if directive in ("!cluster", "!cluster_monitor", "!pit"):
+        try:
+            from tools.specialists.pit_crew import consult_cluster_monitor
+            return consult_cluster_monitor(action="status")
+        except Exception as e:
+            return f"❌ {directive} dispatch failed: {e}"
+
+    if directive in ("!perf", "!performance", "!performance_tuner", "!dyno"):
+        try:
+            from tools.specialists.pit_crew import consult_performance_tuner
+            target_tool = payload.strip() if payload else None
+            return consult_performance_tuner(tool_name=target_tool)
+        except Exception as e:
+            return f"❌ {directive} dispatch failed: {e}"
+
+    if directive in ("!protocol", "!framing", "!framing_sentinel", "!wire"):
+        try:
+            from tools.specialists.pit_crew import consult_framing_sentinel
+            return consult_framing_sentinel()
+        except Exception as e:
+            return f"❌ {directive} dispatch failed: {e}"
+
+    if directive in ("!leak_audit", "!leak_sentinel", "!sec"):
+        try:
+            from tools.specialists.pit_crew import consult_leak_sentinel
+            target = payload.strip() if payload else None
+            return consult_leak_sentinel(target_dir=target)
+        except Exception as e:
+            return f"❌ {directive} dispatch failed: {e}"
+
+    if directive in ("!history", "!memory_archivist", "!doc"):
+        try:
+            from tools.specialists.pit_crew import consult_memory_archivist
+            q = payload.strip() if payload else "post_mortem"
+            return consult_memory_archivist(query=q)
+        except Exception as e:
+            return f"❌ {directive} dispatch failed: {e}"
+
+    # 4. Direct Workflow Shortcuts
     workflow_map = {
         "!timesfm": "predictive_timesfm",
         "!vcs_qa": "vcs_qa",

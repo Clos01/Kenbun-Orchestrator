@@ -163,15 +163,19 @@ print("="*50)
         print(f"🛡️ [Code Sentinel] Pre-flight auto-fixes applied: {fixes}")
         python_script = fixed_script
 
+    satellite_user = os.environ.get("P330_USER") or os.environ.get("SATELLITE_USER") or os.environ.get("USER") or "appuser"
+    satellite_ip = os.environ.get("P330_IP_ADDRESS") or os.environ.get("P330_IP") or "<REMOTE_HOST_IP>"
+    ssh_target = f"{satellite_user}@{satellite_ip}"
+
     cmd_write = [
         "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", 
-        "user@<REMOTE_HOST_IP>", 
+        ssh_target, 
         f"cat << 'EOF_MARKER' > /tmp/run_e2e_tars.py\n{python_script}\nEOF_MARKER"
     ]
     
     cmd_run = [
         "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", 
-        "user@<REMOTE_HOST_IP>", 
+        ssh_target, 
         "DISPLAY=:0 python3 -u /tmp/run_e2e_tars.py"
     ]
     

@@ -29,9 +29,9 @@ from tools.utils.path_utils import get_project_root
 logger = logging.getLogger("tools.specialists")
 
 # Dedicated LM Studio host for the Code Diagnostician (Local GPU Server)
-LG_2025_HOST = "<ORCHESTRATOR_IP>"
-DEFAULT_MEC_PORT = getattr(settings, "LM_STUDIO_PORT", 2065) or 2065
-DEFAULT_MEC_MODEL = "qwen/qwen2.5-coder-14b"
+LG_2025_HOST = os.environ.get("LG_2025_HOST") or os.environ.get("SWARM_PC_IP") or getattr(settings, "SWARM_PC_IP", "<ORCHESTRATOR_IP>")
+DEFAULT_MEC_PORT = int(os.environ.get("LG_2025_PORT") or os.environ.get("LM_STUDIO_PORT") or getattr(settings, "LM_STUDIO_PORT", 2065) or 2065)
+DEFAULT_MEC_MODEL = os.environ.get("LG_2025_MODEL") or os.environ.get("LM_STUDIO_MODEL") or getattr(settings, "SWARM_MODEL", "qwen/qwen2.5-coder-14b") or "qwen/qwen2.5-coder-14b"
 
 
 def _call_lg_lmstudio(
@@ -159,10 +159,15 @@ def consult_cluster_monitor(action: str = "status", target: Optional[str] = None
     Monitors sovereign cluster nodes (Mac, Edge_Node, LG 2025), port status, and active background tasks.
     """
     with silence_stdout():
+        p330_ip = os.environ.get("P330_IP_ADDRESS") or getattr(settings, "P330_IP_ADDRESS", "<REMOTE_HOST_IP>")
+        p330_port = int(os.environ.get("P330_OLLAMA_PORT") or getattr(settings, "P330_OLLAMA_PORT", 11434) or 11434)
+        mac_ip = os.environ.get("MACBOOK_IP") or os.environ.get("MAC_HOST", "<CLIENT_IP>")
+        mac_port = int(os.environ.get("MAC_SSH_PORT", "22"))
+
         nodes = {
             "gpu_node": {"ip": LG_2025_HOST, "port": DEFAULT_MEC_PORT, "role": "LM Studio & ChromaDB"},
-            "Edge_Node": {"ip": "<REMOTE_HOST_IP>", "port": 11434, "role": "ThinkStation Edge Satellite"},
-            "macbook": {"ip": "<CLIENT_IP>", "port": 22, "role": "Mac Sovereign Workstation"},
+            "Edge_Node": {"ip": p330_ip, "port": p330_port, "role": "ThinkStation Edge Satellite"},
+            "macbook": {"ip": mac_ip, "port": mac_port, "role": "Mac Sovereign Workstation"},
         }
 
         cluster_status = {}

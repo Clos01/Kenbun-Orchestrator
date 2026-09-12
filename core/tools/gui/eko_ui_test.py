@@ -20,7 +20,7 @@ from PIL import ImageGrab
 
 os.environ["DISPLAY"] = ":0"
 
-BASE     = os.environ.get("EKO_BASE", "http://<CLIENT_IP>:3001")
+BASE     = os.environ.get("EKO_BASE", "http://localhost:3001")
 ENDPOINT = "http://127.0.0.1:8090/v1/chat/completions"
 MODEL    = "/models/UI-TARS-2B-SFT-Q4_K_M.gguf"
 OUT      = "/tmp/eko_test"

@@ -217,10 +217,12 @@ def get_embedding(text, model="qwen3-embedding:4b"):
         "prompt": text
     }).encode("utf-8")
     
-    ollama_url = os.environ.get("OLLAMA_URL") or "http://<VECTOR_DB_IP>:11434/api/generate"
+    ollama_host = os.environ.get("OLLAMA_HOST", "127.0.0.1")
+    default_ollama = f"http://{ollama_host}:11434/api/generate"
+    ollama_url = os.environ.get("OLLAMA_URL") or default_ollama
     embeddings_url = ollama_url.replace("/api/generate", "/api/embeddings")
     if "/api/embeddings" not in embeddings_url:
-        embeddings_url = "http://<VECTOR_DB_IP>:11434/api/embeddings"
+        embeddings_url = f"http://{ollama_host}:11434/api/embeddings"
         
     req = urllib.request.Request(
         embeddings_url,
@@ -238,8 +240,9 @@ def get_embedding(text, model="qwen3-embedding:4b"):
 def cmd_apply(args):
     pg_host = os.environ.get("POSTGRES_HOST")
     if pg_host and psycopg is not None:
-        # If running inside docker container network, route via localhost loopback
-        if os.path.exists("/.dockerenv") or pg_host in ["<ORCHESTRATOR_IP>", "<VECTOR_DB_IP>"]:
+        # If running inside docker container network or configured for loopback, route via localhost loopback
+        remote_hosts = [os.environ.get("LG_2025_HOST", "<ORCHESTRATOR_IP>"), os.environ.get("LG_2025_SIDECAR", "<VECTOR_DB_IP>")]
+        if os.path.exists("/.dockerenv") or pg_host in remote_hosts or os.environ.get("POSTGRES_USE_LOCAL", "").lower() in ("1", "true"):
             pg_host = "localhost"
             
         sys.stderr.write(f"Connecting to PostgreSQL database at {pg_host}...\n")

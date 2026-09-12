@@ -45,8 +45,8 @@ class AutonomousBrowserAgent:
         satellite_user: Optional[str] = None,
         default_timeout: int = 45
     ):
-        self.satellite_ip = satellite_ip or os.environ.get("P330_IP", os.environ.get("SATELLITE_IP", "127.0.0.1"))
-        self.satellite_user = satellite_user or os.environ.get("P330_USER", os.environ.get("SATELLITE_USER", "user"))
+        self.satellite_ip = satellite_ip or os.environ.get("P330_IP_ADDRESS", os.environ.get("P330_IP", os.environ.get("SATELLITE_IP", "127.0.0.1")))
+        self.satellite_user = satellite_user or os.environ.get("P330_USER", os.environ.get("SATELLITE_USER", os.environ.get("USER", "appuser")))
         self.default_timeout = default_timeout
 
     def run(

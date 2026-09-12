@@ -19,7 +19,7 @@ def test_speculative_decoding_endpoint_alive():
     Test if the Legion host (or local proxy) is responding on the LM Studio port.
     This will quickly fail if the Tailscale node is down.
     """
-    host = settings.SWARM_PC_IP if settings.SWARM_PC_IP != "localhost" else "<ORCHESTRATOR_IP>"
+    host = os.environ.get("LG_2025_HOST") or (settings.SWARM_PC_IP if settings.SWARM_PC_IP != "localhost" else "127.0.0.1")
     port = settings.models.lm_studio_port
     
     url = f"http://{host}:{port}/v1/models"

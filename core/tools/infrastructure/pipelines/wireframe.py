@@ -167,8 +167,9 @@ def _push(doc: dict, project_id: str) -> str:
     import urllib.parse
     import urllib.request
     try:
+        base_url = (os.environ.get("FRONTEND_URL") or getattr(settings, "FRONTEND_URL", "http://localhost:3000")).rstrip("/")
         req = urllib.request.Request(
-            "http://<VECTOR_DB_IP>:3000/api/wireframe?project_id="
+            f"{base_url}/api/wireframe?project_id="
             + urllib.parse.quote(str(project_id)),
             data=json.dumps(doc).encode("utf-8"),
             headers={"Content-Type": "application/json"}, method="POST")

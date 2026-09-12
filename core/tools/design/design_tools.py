@@ -62,9 +62,11 @@ def generate_wireframe(prompt: str, project_id: str = "", detail: str = "") -> s
         except Exception as e:
             return f"ERROR: wireframe generation failed: {e}"
         try:
+            from tools.infrastructure.config import settings
+            base_url = (os.environ.get("FRONTEND_URL") or getattr(settings, "FRONTEND_URL", "http://localhost:3000")).rstrip("/")
             body = json.dumps(doc).encode("utf-8")
             req = urllib.request.Request(
-                "http://<VECTOR_DB_IP>:3000/api/wireframe?project_id="
+                f"{base_url}/api/wireframe?project_id="
                 + _urlparse.quote(project_id),
                 data=body,
                 headers={"Content-Type": "application/json"}, method="POST",

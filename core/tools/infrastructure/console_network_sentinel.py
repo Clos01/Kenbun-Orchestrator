@@ -49,8 +49,10 @@ RUNTIME_ERROR_SIGNATURES = [
 class ConsoleNetworkSentinel:
     """Pre-flight auditor for application routes, console logs, and network/DB health."""
 
-    def __init__(self, base_url: str = "http://localhost:3000", default_timeout: float = 12.0):
-        self.base_url = base_url.rstrip("/")
+    def __init__(self, base_url: Optional[str] = None, default_timeout: float = 12.0):
+        from tools.infrastructure.config import settings
+        resolved_base = base_url or os.environ.get("FRONTEND_URL") or getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+        self.base_url = str(resolved_base).rstrip("/")
         self.default_timeout = default_timeout
 
     def probe_route(self, route: str) -> Dict[str, Any]:
@@ -189,7 +191,7 @@ class ConsoleNetworkSentinel:
 
 @sovereign_tool(name="audit_console_and_network", category="Infrastructure")
 def audit_console_and_network(
-    base_url: str = "http://localhost:3000",
+    base_url: Optional[str] = None,
     routes: Optional[List[str]] = None,
     timeout_sec: float = 12.0
 ) -> Dict[str, Any]:

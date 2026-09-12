@@ -84,7 +84,11 @@ def verify_authorization(request: Request):
     """
     import secrets
     client_ip = request.client.host if request.client else ""
-    if client_ip in ("127.0.0.1", "localhost", "<REMOTE_HOST_IP>") or client_ip.startswith("172."):
+    trusted_ips = {"127.0.0.1", "localhost"}
+    p330_ip = os.environ.get("P330_IP_ADDRESS") or getattr(settings, "P330_IP_ADDRESS", "")
+    if p330_ip:
+        trusted_ips.add(p330_ip)
+    if client_ip in trusted_ips or client_ip.startswith("172.") or client_ip.startswith("10.") or client_ip.startswith("192.168."):
         return
 
     auth_header = request.headers.get("Authorization")

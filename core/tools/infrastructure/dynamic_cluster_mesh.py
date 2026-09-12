@@ -56,45 +56,51 @@ def get_local_node_type() -> str:
 
 def resolve_cluster_endpoints() -> Dict[str, Any]:
     """Probes LG 2025 and determines the optimal working IP/port for each service."""
-    lg_host = "<ORCHESTRATOR_IP>"
-    lg_sidecar = "<VECTOR_DB_IP>"
+    lg_host = os.environ.get("LG_2025_HOST") or os.environ.get("SWARM_PC_IP") or "<ORCHESTRATOR_IP>"
+    lg_sidecar = os.environ.get("LG_2025_SIDECAR") or "<VECTOR_DB_IP>"
 
-    pg_host_open = probe_socket(lg_host, 5432)
-    pg_sidecar_open = probe_socket(lg_sidecar, 5432)
+    pg_port = int(os.environ.get("POSTGRES_PORT", 5432))
+    chroma_port = int(os.environ.get("CHROMA_PORT", 8000))
+    lm_port = int(os.environ.get("LM_STUDIO_PORT", 2065))
+    honcho_port = int(os.environ.get("HONCHO_PORT", 8001))
+    lm_model = os.environ.get("LM_STUDIO_MODEL", "qwen/qwen2.5-coder-14b")
 
-    chroma_sidecar_open = probe_socket(lg_sidecar, 8000)
-    chroma_host_open = probe_socket(lg_host, 8000)
+    pg_host_open = probe_socket(lg_host, pg_port)
+    pg_sidecar_open = probe_socket(lg_sidecar, pg_port)
+
+    chroma_sidecar_open = probe_socket(lg_sidecar, chroma_port)
+    chroma_host_open = probe_socket(lg_host, chroma_port)
     chroma_ip = lg_sidecar if chroma_sidecar_open else (lg_host if chroma_host_open else lg_sidecar)
 
-    lm_host_open = probe_socket(lg_host, 2065)
+    lm_host_open = probe_socket(lg_host, lm_port)
 
-    honcho_sidecar_open = probe_socket(lg_sidecar, 8001)
-    honcho_host_open = probe_socket(lg_host, 8001)
+    honcho_sidecar_open = probe_socket(lg_sidecar, honcho_port)
+    honcho_host_open = probe_socket(lg_host, honcho_port)
     honcho_ip = lg_sidecar if honcho_sidecar_open else (lg_host if honcho_host_open else lg_sidecar)
 
     return {
         "postgres": {
             "host": lg_host if pg_host_open else lg_sidecar,
-            "port": 5432,
-            "user": "appuser",
-            "password": "kenbun",
-            "db": "kenbun_intelligence",
+            "port": pg_port,
+            "user": os.environ.get("POSTGRES_USER", "appuser"),
+            "password": os.environ.get("POSTGRES_PASSWORD", "kenbun"),
+            "db": os.environ.get("POSTGRES_DB", "kenbun_intelligence"),
             "status": "online" if (pg_host_open or pg_sidecar_open) else "offline"
         },
         "chromadb": {
             "host": chroma_ip,
-            "port": 8000,
+            "port": chroma_port,
             "status": "online" if (chroma_sidecar_open or chroma_host_open) else "offline"
         },
         "lm_studio": {
             "host": lg_host,
-            "port": 2065,
-            "model": "qwen/qwen2.5-coder-14b",
+            "port": lm_port,
+            "model": lm_model,
             "status": "online" if lm_host_open else "offline"
         },
         "honcho": {
             "host": honcho_ip,
-            "port": 8001,
+            "port": honcho_port,
             "status": "online" if (honcho_sidecar_open or honcho_host_open) else "offline"
         }
     }
@@ -132,11 +138,13 @@ def generate_node_mcp_config(node_type: str, endpoints: Dict[str, Any]) -> Dict[
         proj_root = str(kenbun_root)
         python_path = f"{proj_root}/core:{proj_root}/core/tools:{proj_root}"
     else:  # Edge_Node (Edge Compute Node)
+        p330_user = os.environ.get("P330_USER") or os.environ.get("SATELLITE_USER") or os.environ.get("USER") or "appuser"
         if platform.system().lower() == "linux":
             kenbun_root = local_home / "Dev" / "Kenbun"
         else:
             # Constructed dynamically for remote Edge_Node node when running from Mac
-            kenbun_root = Path(os.sep + "home") / "user" / "Dev" / "Kenbun"
+            remote_p330_root = os.environ.get("KENBUN_REMOTE_ROOT")
+            kenbun_root = Path(remote_p330_root) if remote_p330_root else (Path(os.sep + "home") / p330_user / "Dev" / "Kenbun")
         py_bin = str(kenbun_root / "venv" / "bin" / "python")
         server_path = str(kenbun_root / "core" / "tools" / "infrastructure" / "server.py")
         proj_root = str(kenbun_root)
@@ -156,7 +164,7 @@ def generate_node_mcp_config(node_type: str, endpoints: Dict[str, Any]) -> Dict[
             "PRIMARY_LLM_URL": f"http://{endpoints['lm_studio']['host']}:{endpoints['lm_studio']['port']}/v1",
             "PRIMARY_LLM_MODEL": endpoints["lm_studio"]["model"],
             "LM_Studio": f"http://{endpoints['lm_studio']['host']}:{endpoints['lm_studio']['port']}/v1",
-            "PLANKA_BASE_URL": f"http://{endpoints['honcho']['host']}:3000",
+            "PLANKA_BASE_URL": os.environ.get("PLANKA_BASE_URL", f"http://{endpoints['honcho']['host']}:3000"),
             "POSTGRES_HOST": endpoints["postgres"]["host"],
             "POSTGRES_PORT": str(endpoints["postgres"]["port"]),
             "POSTGRES_USER": endpoints["postgres"]["user"],
@@ -194,7 +202,8 @@ def write_local_configs(config: Dict[str, Any]) -> list[str]:
 
 def sync_remote_p330(endpoints: Dict[str, Any]) -> Dict[str, Any]:
     """Syncs configuration to Edge_Node over SSH."""
-    p330_ip = os.environ.get("P330_IP_ADDRESS", os.environ.get("P330_IP", os.getenv("COMPUTE_NODE_IP", "127.0.0.1")))
+    p330_ip = os.environ.get("P330_IP_ADDRESS", os.environ.get("P330_IP", "<REMOTE_HOST_IP>"))
+    p330_user = os.environ.get("P330_USER") or os.environ.get("SATELLITE_USER") or os.environ.get("USER") or "appuser"
     p330_cfg = generate_node_mcp_config("Edge_Node", endpoints)
     cfg_json = json.dumps(p330_cfg)
 
@@ -212,9 +221,9 @@ for d in [Path.home() / ".gemini" / sub for sub in ["config", "antigravity", "an
     try:
         subprocess.check_call([
             "ssh", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=3",
-            f"user@{p330_ip}", remote_cmd
+            f"{p330_user}@{p330_ip}", remote_cmd
         ])
-        return {"status": "success", "peer": f"user@{p330_ip}"}
+        return {"status": "success", "peer": f"{p330_user}@{p330_ip}"}
     except Exception as e:
         return {"status": "failed", "error": str(e)}
 

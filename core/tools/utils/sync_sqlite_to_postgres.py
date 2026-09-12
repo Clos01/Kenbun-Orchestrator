@@ -48,8 +48,9 @@ def sync_sqlite_to_postgres():
 
     logger.info(f"🔍 Found {len(rows)} tool stat records to sync.")
 
-    # Override postgres host to localhost for SSH tunneling if running locally
-    if os.environ.get("POSTGRES_HOST") == "127.0.0.1" or settings.POSTGRES_HOST == "<ORCHESTRATOR_IP>":
+    target_pg = getattr(settings, "POSTGRES_HOST", "127.0.0.1")
+    remote_host = os.environ.get("LG_2025_HOST", "<ORCHESTRATOR_IP>")
+    if os.environ.get("POSTGRES_HOST") == "127.0.0.1" or target_pg in ("127.0.0.1", "localhost", remote_host):
         logger.info("🔌 Routing database calls through local tunnel (127.0.0.1)...")
     
     success_count = 0

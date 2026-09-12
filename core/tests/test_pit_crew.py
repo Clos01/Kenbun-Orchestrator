@@ -105,3 +105,71 @@ def test_consult_memory_archivist():
     assert res["specialist"] == "memory-archivist"
     assert "query" in res
     assert "verdict" in res
+
+
+def test_specialists_bang_dispatcher():
+    """Verifies that all 6 functional specialist directives dispatch cleanly via ! commands."""
+    from tools.strategy.bang_dispatcher import dispatch_bang_command
+
+    # 1. !diagnose
+    with patch("tools.specialists.pit_crew._call_lg_lmstudio", return_value="Mocked diagnosis"):
+        res = dispatch_bang_command("!diagnose 'WebSocket EOF race condition'")
+        parsed = json.loads(res)
+        assert parsed["specialist"] == "code-diagnostician"
+        assert parsed["status"] == "DIAGNOSED"
+
+    # 2. !cluster
+    res = dispatch_bang_command("!cluster")
+    parsed = json.loads(res)
+    assert parsed["specialist"] == "cluster-monitor"
+    assert "cluster_nodes" in parsed
+
+    # 3. !perf
+    res = dispatch_bang_command("!perf replace_file_content")
+    parsed = json.loads(res)
+    assert parsed["specialist"] == "performance-tuner"
+
+    # 4. !protocol
+    res = dispatch_bang_command("!protocol")
+    parsed = json.loads(res)
+    assert parsed["specialist"] == "framing-sentinel"
+
+    # 5. !leak_audit
+    res = dispatch_bang_command("!leak_audit")
+    parsed = json.loads(res)
+    assert parsed["specialist"] == "leak-sentinel"
+
+    # 6. !history
+    res = dispatch_bang_command("!history telemetry")
+    parsed = json.loads(res)
+    assert parsed["specialist"] == "memory-archivist"
+
+
+def test_specialists_pipeline_registry():
+    """Verifies that all functional specialist pipelines and aliases are registered in the orchestrator."""
+    from tools.infrastructure.orchestrator import registry
+
+    expected_pipelines = [
+        "code_diagnosis", "diagnose",
+        "cluster_health", "cluster",
+        "performance_tuning", "performance", "perf",
+        "protocol_framing", "protocol",
+        "zero_leak_audit", "leak_audit",
+        "memory_archive", "history",
+    ]
+    registered = registry.get_all_pipelines()
+    for name in expected_pipelines:
+        assert name in registered, f"Pipeline '{name}' not found in orchestrator registry"
+
+
+def test_specialists_dynamic_configuration(monkeypatch):
+    """Verifies that host and port configuration dynamically responds to environment variables."""
+    monkeypatch.setenv("P330_IP_ADDRESS", "192.168.1.99")
+    monkeypatch.setenv("P330_OLLAMA_PORT", "11435")
+    monkeypatch.setenv("MACBOOK_IP", "192.168.1.88")
+
+    res_raw = consult_cluster_monitor()
+    res = json.loads(res_raw)
+    assert res["cluster_nodes"]["Edge_Node"]["ip"] == "192.168.1.99"
+    assert res["cluster_nodes"]["macbook"]["ip"] == "192.168.1.88"
+

@@ -49,6 +49,14 @@ from tools.infrastructure.pipelines.flooring_target import build_flooring_target
 from tools.infrastructure.pipelines.system_security import build_system_security_pipeline
 from tools.infrastructure.pipelines.predictive_timesfm import build_predictive_timesfm_pipeline
 from tools.infrastructure.pipelines.agent_skill_evolution import build_agent_skill_evolution_pipeline
+from tools.infrastructure.pipelines.specialists_pipeline import (
+    build_code_diagnostician_pipeline,
+    build_cluster_monitor_pipeline,
+    build_performance_tuner_pipeline,
+    build_framing_sentinel_pipeline,
+    build_leak_sentinel_pipeline,
+    build_memory_archivist_pipeline,
+)
 from tools.utils.orchestrator_helpers import _prune_log
 from tools.utils.telemetry import log_tool_performance
 
@@ -205,6 +213,71 @@ registry.register_pipeline(PipelineEntry(
     name="agent_skill_evolution",
     builder=build_agent_skill_evolution_pipeline,
     description="Autonomous Agent & Skill Evolution: Gap discovery → synthesis → sandbox verification → registry promotion → supervisor consensus",
+))
+registry.register_pipeline(PipelineEntry(
+    name="code_diagnosis",
+    builder=build_code_diagnostician_pipeline,
+    description="Code Fault Diagnostician: Local Qwen 2.5 Coder 14B on LG 2025 diagnoses root cause and prescribes surgical diffs",
+))
+registry.register_pipeline(PipelineEntry(
+    name="diagnose",
+    builder=build_code_diagnostician_pipeline,
+    description="Alias for code_diagnosis",
+))
+registry.register_pipeline(PipelineEntry(
+    name="cluster_health",
+    builder=build_cluster_monitor_pipeline,
+    description="Cluster Node & Health Monitor: Probes LG 2025, Edge_Node, MacBook, and background tasks",
+))
+registry.register_pipeline(PipelineEntry(
+    name="cluster",
+    builder=build_cluster_monitor_pipeline,
+    description="Alias for cluster_health",
+))
+registry.register_pipeline(PipelineEntry(
+    name="performance_tuning",
+    builder=build_performance_tuner_pipeline,
+    description="Bayesian Performance Tuner: Evaluates tool win rates, confidence curves, and database fallback",
+))
+registry.register_pipeline(PipelineEntry(
+    name="performance",
+    builder=build_performance_tuner_pipeline,
+    description="Alias for performance_tuning",
+))
+registry.register_pipeline(PipelineEntry(
+    name="perf",
+    builder=build_performance_tuner_pipeline,
+    description="Alias for performance_tuning",
+))
+registry.register_pipeline(PipelineEntry(
+    name="protocol_framing",
+    builder=build_framing_sentinel_pipeline,
+    description="FastMCP Protocol & Framing Sentinel: Audits unshielded stdout prints that corrupt JSON-RPC framing",
+))
+registry.register_pipeline(PipelineEntry(
+    name="protocol",
+    builder=build_framing_sentinel_pipeline,
+    description="Alias for protocol_framing",
+))
+registry.register_pipeline(PipelineEntry(
+    name="zero_leak_audit",
+    builder=build_leak_sentinel_pipeline,
+    description="Zero-Leak Security Sentinel: Audits files for private user paths, API keys, and exposed secrets",
+))
+registry.register_pipeline(PipelineEntry(
+    name="leak_audit",
+    builder=build_leak_sentinel_pipeline,
+    description="Alias for zero_leak_audit",
+))
+registry.register_pipeline(PipelineEntry(
+    name="memory_archive",
+    builder=build_memory_archivist_pipeline,
+    description="Post-Mortem & Memory Archivist: Queries past incident post-mortems and Hivemind concept memories",
+))
+registry.register_pipeline(PipelineEntry(
+    name="history",
+    builder=build_memory_archivist_pipeline,
+    description="Alias for memory_archive",
 ))
 
 # Workflows whose Gemini-heavy pipelines routinely exceed a synchronous client's

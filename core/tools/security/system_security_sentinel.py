@@ -41,7 +41,7 @@ class SystemSecuritySentinel:
         r"(?i)\bfdisk\b",
         r"(?i)\bdd\s+if=/dev/(zero|urandom)\s+of=/dev/",
         r":\(\)\s*\{\s*:\|:&\s*\};:",
-        r"(?i)\bchmod\s+(-R\s+)?(777|666)\s+/(?!home/user/Dev)",
+        r"(?i)\bchmod\s+(-R\s+)?(777|666)\s+/(?!(home/[^/\s]+|Users/[^/\s]+)/Dev)",
         r"(?i)\bchown\s+(-R\s+)?root\b",
         r"(?i)\b(curl|wget)\b.*\|\s*(bash|sh)\b",
         r"(?i)\bcat\s+~?/\.ssh/id_[a-zA-Z0-9_-]+\b.*\b(curl|nc|ncat|netcat|wget)\b",
