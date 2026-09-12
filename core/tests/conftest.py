@@ -58,3 +58,10 @@ def mock_databases_for_testing():
     with patch("tools.strategy.strategy_manager.BayesianGovernor._init_remote_db", mock_init_remote_db), \
          patch("psycopg.connect", mock_psycopg_connect):
         yield
+
+
+@pytest.fixture(autouse=True)
+def mock_background_telemetry_for_testing():
+    """Globally silence background tool telemetry worker to prevent async race conditions."""
+    with patch("tools.registry._record_tool_outcome"):
+        yield

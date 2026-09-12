@@ -146,17 +146,54 @@ def cli_task(args):
         print(f"{RED}Unknown task command: {sub}{RESET}")
 
 
+def cli_replace(args):
+    if len(args) < 3:
+        print(f"{RED}Usage: bin/kenbun-harness replace <file_path> <target_string> <replacement_string> [start_line] [end_line]{RESET}")
+        sys.exit(1)
+    file_path = args[0]
+    target = args[1]
+    replacement = args[2]
+    start_line = int(args[3]) if len(args) > 3 else None
+    end_line = int(args[4]) if len(args) > 4 else None
+
+    from tools.execution.surgical_editor import replace_file_content
+    res = json.loads(replace_file_content(file_path, target, replacement, start_line=start_line, end_line=end_line))
+    if res.get("status") == "success":
+        print(f"{GREEN}✓ Replaced successfully:{RESET} {res.get('file')} ({res.get('matches_replaced')} match replaced)")
+    else:
+        print(f"{RED}❌ Replacement failed:{RESET} {res.get('message')}")
+
+
+def cli_audit_complete(args):
+    if not args:
+        print(f"{RED}Usage: bin/kenbun-harness audit-complete <file_path> [task_objective]{RESET}")
+        sys.exit(1)
+    file_path = args[0]
+    obj = " ".join(args[1:]) if len(args) > 1 else "Completeness check"
+
+    from tools.execution.surgical_editor import audit_execution_completeness
+    res = json.loads(audit_execution_completeness(file_path=file_path, task_objective=obj))
+    if res.get("verdict") == "APPROVED":
+        print(f"{GREEN}✅ Execution Completeness APPROVED:{RESET} No lazy stubs or TODOs detected.")
+    else:
+        print(f"{RED}❌ Execution Completeness BLOCKED (Score: {res.get('completeness_score')}):{RESET}")
+        for v in res.get("violations", []):
+            print(f"  {YELLOW}Line {v['line']}:{RESET} {v['reason']} -> {CYAN}{v['code']}{RESET}")
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(f"{BOLD}Kenbun Autonomous Harness & Inspection Subsystem{RESET}")
         print("Usage:")
-        print("  bin/kenbun-harness <filepath_or_project_dir>     (run code clarity & backend verifier)")
-        print("  bin/kenbun-harness search <query> [path]         (host-level fast ripgrep search)")
-        print("  bin/kenbun-harness view <file> [start] [end]     (surgical sliding-window code reader)")
-        print("  bin/kenbun-harness task spawn \"<command>\"        (run detached background job)")
-        print("  bin/kenbun-harness task status <task_id>         (check job status and tail log)")
-        print("  bin/kenbun-harness task list                     (list recent background tasks)")
-        print("  bin/kenbun-harness task kill <task_id>           (kill background job)")
+        print("  bin/kenbun-harness <filepath_or_project_dir>           (run code clarity & backend verifier)")
+        print("  bin/kenbun-harness search <query> [path]               (host-level fast ripgrep search)")
+        print("  bin/kenbun-harness view <file> [start] [end]           (surgical sliding-window code reader)")
+        print("  bin/kenbun-harness replace <file> <target> <repl>      (surgical exact-match replacer)")
+        print("  bin/kenbun-harness audit-complete <file>               (anti-laziness verification guardrail)")
+        print("  bin/kenbun-harness task spawn \"<command>\"              (run detached background job)")
+        print("  bin/kenbun-harness task status <task_id>               (check job status and tail log)")
+        print("  bin/kenbun-harness task list                           (list recent background tasks)")
+        print("  bin/kenbun-harness task kill <task_id>                 (kill background job)")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -164,6 +201,10 @@ if __name__ == "__main__":
         cli_search(sys.argv[2:])
     elif cmd == "view":
         cli_view(sys.argv[2:])
+    elif cmd == "replace":
+        cli_replace(sys.argv[2:])
+    elif cmd == "audit-complete":
+        cli_audit_complete(sys.argv[2:])
     elif cmd == "task":
         cli_task(sys.argv[2:])
     else:

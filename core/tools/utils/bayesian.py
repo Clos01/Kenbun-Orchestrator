@@ -103,7 +103,8 @@ DEFAULT_SYSTEM_TOOLS = {
     "sovereignty_engine", "memory_classifier", "neural_classifier",
     "intelligence_engine", "ripgrep_search", "view_file", "write_to_file",
     "spawn_background_task", "get_background_task_status", "kill_background_task",
-    "list_background_tasks",
+    "list_background_tasks", "replace_file_content", "audit_execution_completeness",
+    "run_isolated_experiment",
 }
 
 
