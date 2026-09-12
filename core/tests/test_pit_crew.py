@@ -1,23 +1,30 @@
-"""Unit tests for Kenbun Sovereign Pit Crew Specialists."""
+"""Unit tests for Kenbun Functional Sovereign Specialists."""
 
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import pytest
 
 from tools.specialists.pit_crew import (
-    consult_kenbun_mec,
-    consult_kenbun_pit,
-    consult_kenbun_dyno,
-    consult_kenbun_wire,
-    consult_kenbun_sec,
-    consult_kenbun_doc,
+    consult_code_diagnostician,
+    consult_cluster_monitor,
+    consult_performance_tuner,
+    consult_framing_sentinel,
+    consult_leak_sentinel,
+    consult_memory_archivist,
 )
 from tools.infrastructure.agents import PERSONAS
 
 
-def test_pit_crew_personas_registered():
-    """Verifies that all 6 Pit Crew specialist personas are registered in the swarm."""
-    expected_ids = ["kenbun-mec", "kenbun-pit", "kenbun-dyno", "kenbun-wire", "kenbun-sec", "kenbun-doc"]
+def test_specialist_personas_registered():
+    """Verifies that all functional specialist personas are registered in the swarm."""
+    expected_ids = [
+        "code-diagnostician",
+        "cluster-monitor",
+        "performance-tuner",
+        "framing-sentinel",
+        "leak-sentinel",
+        "memory-archivist",
+    ]
     for pid in expected_ids:
         assert pid in PERSONAS
         p = PERSONAS[pid]
@@ -26,33 +33,33 @@ def test_pit_crew_personas_registered():
         assert len(p.system_prompt) > 0
 
 
-def test_consult_kenbun_mec_with_mocked_llm():
-    """Verifies that consult_kenbun_mec formats input, queries LM Studio, and returns structured diagnosis."""
-    mock_response = "Root cause: tensioner pulley race condition on line 42."
+def test_consult_code_diagnostician_with_mocked_llm():
+    """Verifies that consult_code_diagnostician formats input, queries LM Studio, and returns structured diagnosis."""
+    mock_response = "Root cause: tensioner race condition on line 42."
     with patch("tools.specialists.pit_crew._call_lg_lmstudio", return_value=mock_response):
-        res_raw = consult_kenbun_mec("Async worker hangs on shutdown")
+        res_raw = consult_code_diagnostician("Async worker hangs on shutdown")
         res = json.loads(res_raw)
-        assert res["specialist"] == "kenbun-mec"
+        assert res["specialist"] == "code-diagnostician"
         assert res["status"] == "DIAGNOSED"
         assert "qwen2.5-coder-14b" in res["engine"]
         assert "line 42" in res["diagnosis"]
 
 
-def test_consult_kenbun_mec_fallback_when_offline():
+def test_consult_code_diagnostician_fallback_when_offline():
     """Verifies graceful fallback when LG 2025 is unreachable."""
     with patch("tools.specialists.pit_crew._call_lg_lmstudio", return_value=None):
-        res_raw = consult_kenbun_mec("Database lock contention")
+        res_raw = consult_code_diagnostician("Database lock contention")
         res = json.loads(res_raw)
-        assert res["specialist"] == "kenbun-mec"
+        assert res["specialist"] == "code-diagnostician"
         assert res["status"] == "FALLBACK_DIAGNOSIS"
-        assert "Mechanic quick-scan" in res["diagnosis"]
+        assert "Diagnostic quick-scan" in res["diagnosis"]
 
 
-def test_consult_kenbun_pit():
-    """Verifies that consult_kenbun_pit reports cluster node states and recent background jobs."""
-    res_raw = consult_kenbun_pit()
+def test_consult_cluster_monitor():
+    """Verifies that consult_cluster_monitor reports cluster node states and recent background jobs."""
+    res_raw = consult_cluster_monitor()
     res = json.loads(res_raw)
-    assert res["specialist"] == "kenbun-pit"
+    assert res["specialist"] == "cluster-monitor"
     assert "cluster_nodes" in res
     assert "gpu_node" in res["cluster_nodes"]
     assert "Edge_Node" in res["cluster_nodes"]
@@ -60,11 +67,11 @@ def test_consult_kenbun_pit():
     assert "verdict" in res
 
 
-def test_consult_kenbun_dyno():
-    """Verifies that consult_kenbun_dyno reports Bayesian confidence and horsepower."""
-    res_raw = consult_kenbun_dyno(tool_name="replace_file_content")
+def test_consult_performance_tuner():
+    """Verifies that consult_performance_tuner reports Bayesian confidence and horsepower."""
+    res_raw = consult_performance_tuner(tool_name="replace_file_content")
     res = json.loads(res_raw)
-    assert res["specialist"] == "kenbun-dyno"
+    assert res["specialist"] == "performance-tuner"
     assert "tool_confidence_curves" in res
     assert "replace_file_content" in res["tool_confidence_curves"]
     curve = res["tool_confidence_curves"]["replace_file_content"]
@@ -73,28 +80,28 @@ def test_consult_kenbun_dyno():
     assert "beta" in curve
 
 
-def test_consult_kenbun_wire():
-    """Verifies that consult_kenbun_wire scans for FastMCP stdout framing isolation."""
-    res_raw = consult_kenbun_wire()
+def test_consult_framing_sentinel():
+    """Verifies that consult_framing_sentinel scans for FastMCP stdout framing isolation."""
+    res_raw = consult_framing_sentinel()
     res = json.loads(res_raw)
-    assert res["specialist"] == "kenbun-wire"
+    assert res["specialist"] == "framing-sentinel"
     assert "framing_check" in res
     assert "stray_stdout_prints" in res
 
 
-def test_consult_kenbun_sec():
-    """Verifies that consult_kenbun_sec checks Zero-Leak status."""
-    res_raw = consult_kenbun_sec()
+def test_consult_leak_sentinel():
+    """Verifies that consult_leak_sentinel checks Zero-Leak status."""
+    res_raw = consult_leak_sentinel()
     res = json.loads(res_raw)
-    assert res["specialist"] == "kenbun-sec"
+    assert res["specialist"] == "leak-sentinel"
     assert "zero_leak_status" in res
     assert "verdict" in res
 
 
-def test_consult_kenbun_doc():
-    """Verifies that consult_kenbun_doc queries post-mortems and archive."""
-    res_raw = consult_kenbun_doc("telemetry")
+def test_consult_memory_archivist():
+    """Verifies that consult_memory_archivist queries post-mortems and archive."""
+    res_raw = consult_memory_archivist("telemetry")
     res = json.loads(res_raw)
-    assert res["specialist"] == "kenbun-doc"
+    assert res["specialist"] == "memory-archivist"
     assert "query" in res
     assert "verdict" in res

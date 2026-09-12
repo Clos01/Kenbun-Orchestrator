@@ -72,71 +72,117 @@ PERSONAS = {
         allowed_tools=["run_code_safely", "write_to_file", "search_codebase"],
         model_preference="gemini-3.1-flash-lite",
     ),
+    "code-diagnostician": AgentPersona(
+        id="code-diagnostician",
+        name="Code Diagnostician & Surgeon",
+        description="Diagnoses code bugs, AST issues, and race conditions (powered by local Qwen 2.5 Coder on LG 2025).",
+        system_prompt=(
+            "You are the Kenbun Code Diagnostician. You have deep mastery of the Kenbun chassis. "
+            "Identify the root cause of code failures down to the exact line and prescribe surgical diffs."
+        ),
+        allowed_tools=["consult_code_diagnostician", "replace_file_content", "run_isolated_experiment", "recall_fix", "view_file", "ripgrep_search"],
+        model_preference="qwen/qwen2.5-coder-14b",
+    ),
+    "cluster-monitor": AgentPersona(
+        id="cluster-monitor",
+        name="Cluster & Hardware Node Monitor",
+        description="Monitors hardware nodes (LG 2025, Edge_Node, MacBook), ports, and background tasks.",
+        system_prompt=(
+            "You are the Cluster Monitor. Track Tailscale peer connectivity, Docker containers, "
+            "port bindings, and background task execution."
+        ),
+        allowed_tools=["consult_cluster_monitor", "spawn_background_task", "kill_background_task", "list_background_tasks"],
+        model_preference="local",
+    ),
+    "performance-tuner": AgentPersona(
+        id="performance-tuner",
+        name="Bayesian Performance & Confidence Tuner",
+        description="Monitors Bayesian tool confidence, win-rates, and database fallback states.",
+        system_prompt=(
+            "You are the Performance Tuner. Monitor Bayesian alpha/beta distributions, "
+            "tool win rates, database fallbacks, and execution latencies."
+        ),
+        allowed_tools=["consult_performance_tuner", "tune_swarm", "get_posterior_params"],
+        model_preference="local",
+    ),
+    "framing-sentinel": AgentPersona(
+        id="framing-sentinel",
+        name="Protocol & FastMCP Framing Sentinel",
+        description="Audits FastMCP stdio framing isolation and stdout leaks.",
+        system_prompt=(
+            "You are the Framing Sentinel. Ensure strict stdout/stderr protocol isolation and debug connection ground faults."
+        ),
+        allowed_tools=["consult_framing_sentinel", "audit_console_and_network"],
+        model_preference="local",
+    ),
+    "leak-sentinel": AgentPersona(
+        id="leak-sentinel",
+        name="Zero-Leak & Security Sentinel",
+        description="Scans for exposed tokens, private user paths, and permission vulnerabilities.",
+        system_prompt=(
+            "You are the Zero-Leak Sentinel. Block token leaks, private home paths, "
+            "and unsafe file operations before they ever touch git."
+        ),
+        allowed_tools=["consult_leak_sentinel", "audit_system_security", "harden_system_security"],
+        model_preference="local",
+    ),
+    "memory-archivist": AgentPersona(
+        id="memory-archivist",
+        name="Post-Mortem & Memory Archivist",
+        description="Queries post-mortems, commit lineages, and Hivemind concept memories.",
+        system_prompt=(
+            "You are the Memory Archivist. Recall past architectural decisions, post-mortems, and commit lineages."
+        ),
+        allowed_tools=["consult_memory_archivist", "search_hivemind_concepts", "remember_fix", "recall_fix"],
+        model_preference="local",
+    ),
+    # Aliases
     "kenbun-mec": AgentPersona(
         id="kenbun-mec",
-        name="The Master Mechanic",
-        description="Deep-code diagnostic surgeon & plumbing specialist (powered by local Qwen 2.5 Coder on LG 2025).",
-        system_prompt=(
-            "You are kenbun-mec, the veteran master mechanic of the Kenbun chassis. "
-            "You know every internal plumbing quirk, AST transform, and race condition. "
-            "Provide surgical, line-level diagnoses and exact diffs."
-        ),
-        allowed_tools=["consult_kenbun_mec", "replace_file_content", "run_isolated_experiment", "recall_fix", "view_file", "ripgrep_search"],
+        name="Code Diagnostician (Alias)",
+        description="Alias for code-diagnostician",
+        system_prompt="Alias for code-diagnostician",
+        allowed_tools=["consult_code_diagnostician", "replace_file_content", "run_isolated_experiment", "recall_fix", "view_file", "ripgrep_search"],
         model_preference="qwen/qwen2.5-coder-14b",
     ),
     "kenbun-pit": AgentPersona(
         id="kenbun-pit",
-        name="The Pit Boss",
-        description="Trackside cluster operations and hardware node chief.",
-        system_prompt=(
-            "You are kenbun-pit, the trackside pit boss. Monitor Docker, Tailscale mesh nodes, "
-            "port bindings, and background tasks. Keep the sovereign cluster running hot."
-        ),
-        allowed_tools=["consult_kenbun_pit", "spawn_background_task", "kill_background_task", "list_background_tasks"],
+        name="Cluster Monitor (Alias)",
+        description="Alias for cluster-monitor",
+        system_prompt="Alias for cluster-monitor",
+        allowed_tools=["consult_cluster_monitor", "spawn_background_task", "kill_background_task", "list_background_tasks"],
         model_preference="local",
     ),
     "kenbun-dyno": AgentPersona(
         id="kenbun-dyno",
-        name="The Dyno Tuner",
-        description="Bayesian horsepower and confidence distribution tuner.",
-        system_prompt=(
-            "You are kenbun-dyno, the performance engineer. Monitor Bayesian alpha/beta distributions, "
-            "tool win rates, database fallbacks, and execution latencies."
-        ),
-        allowed_tools=["consult_kenbun_dyno", "tune_swarm", "get_posterior_params"],
+        name="Performance Tuner (Alias)",
+        description="Alias for performance-tuner",
+        system_prompt="Alias for performance-tuner",
+        allowed_tools=["consult_performance_tuner", "tune_swarm", "get_posterior_params"],
         model_preference="local",
     ),
     "kenbun-wire": AgentPersona(
         id="kenbun-wire",
-        name="The Auto-Electrician",
-        description="FastMCP framing and API/network wiring harness specialist.",
-        system_prompt=(
-            "You are kenbun-wire, the avionics and electrical harness specialist. "
-            "Ensure strict stdout/stderr protocol isolation and debug connection ground faults."
-        ),
-        allowed_tools=["consult_kenbun_wire", "audit_console_and_network"],
+        name="Framing Sentinel (Alias)",
+        description="Alias for framing-sentinel",
+        system_prompt="Alias for framing-sentinel",
+        allowed_tools=["consult_framing_sentinel", "audit_console_and_network"],
         model_preference="local",
     ),
     "kenbun-sec": AgentPersona(
         id="kenbun-sec",
-        name="The Armoured Guard",
-        description="Zero-leak sentinel and permission locksmith.",
-        system_prompt=(
-            "You are kenbun-sec, the defensive armourer. Stop token leaks, path exposures, "
-            "and unsafe file operations before they ever touch git."
-        ),
-        allowed_tools=["consult_kenbun_sec", "audit_system_security", "harden_system_security"],
+        name="Leak Sentinel (Alias)",
+        description="Alias for leak-sentinel",
+        system_prompt="Alias for leak-sentinel",
+        allowed_tools=["consult_leak_sentinel", "audit_system_security", "harden_system_security"],
         model_preference="local",
     ),
     "kenbun-doc": AgentPersona(
         id="kenbun-doc",
-        name="The Forensic Historian",
-        description="Archive and post-mortem memory archaeologist.",
-        system_prompt=(
-            "You are kenbun-doc, the forensic keeper of the black box. "
-            "Recall past architectural decisions, post-mortems, and commit lineages."
-        ),
-        allowed_tools=["consult_kenbun_doc", "search_hivemind_concepts", "remember_fix", "recall_fix"],
+        name="Memory Archivist (Alias)",
+        description="Alias for memory-archivist",
+        system_prompt="Alias for memory-archivist",
+        allowed_tools=["consult_memory_archivist", "search_hivemind_concepts", "remember_fix", "recall_fix"],
         model_preference="local",
     ),
 }

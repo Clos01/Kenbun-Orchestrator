@@ -1,13 +1,13 @@
 """
-🏎️ Kenbun Sovereign Pit Crew
-=============================
-High-performance, domain-specialized diagnostic and operations crew:
-- kenbun-mec:  Master Mechanic & Diagnostic Surgeon (powered by Qwen 2.5 Coder 14B on LG 2025)
-- kenbun-pit:  Trackside Pit Boss & Systems/Cluster Chief
-- kenbun-dyno: ECU & Dyno Tuner (Bayesian distribution & performance optimizer)
-- kenbun-wire: Auto-Electrician & Avionics Specialist (FastMCP framing & network wiring)
-- kenbun-sec:  Armoured Guard & Locksmith (Zero-leak & permission sentinel)
-- kenbun-doc:  Forensic Historian (Post-mortem & Hivemind memory archaeologist)
+🏛️ Kenbun Functional Sovereign Specialists
+============================================
+Clear, function-driven sovereign agents and diagnostic tools:
+- consult_code_diagnostician: Code fault diagnostic surgeon (Qwen 2.5 Coder 14B on LG 2025)
+- consult_cluster_monitor:    Cluster hardware nodes & background task monitor
+- consult_performance_tuner:  Bayesian confidence & tool win-rate performance tuner
+- consult_framing_sentinel:   FastMCP protocol & stdout framing isolation auditor
+- consult_leak_sentinel:      Zero-leak path, token, and secret security sentinel
+- consult_memory_archivist:   Historical post-mortem & Hivemind memory search
 """
 
 import json
@@ -26,9 +26,9 @@ from tools.registry import sovereign_tool
 from tools.utils.helpers import silence_stdout
 from tools.utils.path_utils import get_project_root
 
-logger = logging.getLogger("tools.pit_crew")
+logger = logging.getLogger("tools.specialists")
 
-# Dedicated LM Studio host for the Pit Crew (Local GPU Server)
+# Dedicated LM Studio host for the Code Diagnostician (Local GPU Server)
 LG_2025_HOST = "<ORCHESTRATOR_IP>"
 DEFAULT_MEC_PORT = getattr(settings, "LM_STUDIO_PORT", 2065) or 2065
 DEFAULT_MEC_MODEL = "qwen/qwen2.5-coder-14b"
@@ -41,7 +41,6 @@ def _call_lg_lmstudio(
     timeout: float = 60.0,
 ) -> Optional[str]:
     """Sends inference request to LG 2025 LM Studio with fast-fail fallback."""
-    # Prioritize LG 2025 where LM Studio is actively listening
     host = LG_2025_HOST
     port = DEFAULT_MEC_PORT
     url = f"http://{host}:{port}/v1/chat/completions"
@@ -61,34 +60,34 @@ def _call_lg_lmstudio(
         req = urllib.request.Request(
             url,
             data=data,
-            headers={"Content-Type": "application/json", "User-Agent": "Kenbun-PitCrew"},
+            headers={"Content-Type": "application/json", "User-Agent": "Kenbun-Specialists"},
         )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             body = json.loads(resp.read().decode("utf-8"))
             return body.get("choices", [{}])[0].get("message", {}).get("content")
     except Exception as e:
-        logger.debug(f"Pit crew LM Studio call failed ({url}): {e}")
+        logger.debug(f"Specialist LM Studio call failed ({url}): {e}")
         return None
 
 
 # ============================================================================
-# 1. KENBUN-MEC: THE MASTER MECHANIC
+# 1. CODE DIAGNOSTICIAN (DIAGNOSTIC SURGEON)
 # ============================================================================
 
-MEC_SYSTEM_PROMPT = """You are kenbun-mec, the veteran master mechanic and diagnostic surgeon of the Kenbun chassis.
-You have been working on this exact system for years. Speak with grease-monkey veteran precision in 3-5 punchy bullet points.
+DIAGNOSTIC_SYSTEM_PROMPT = """You are the Kenbun Code Diagnostician and Surgical Repair Specialist.
+You have deep mastery of the Kenbun chassis. Speak with concise, technical precision in 3-5 punchy bullet points.
 Diagnose the root cause, identify the exact component or file, and prescribe surgical repairs.
 """
 
-@sovereign_tool(name="consult_kenbun_mec", category="PitCrew")
-def consult_kenbun_mec(
+@sovereign_tool(name="consult_code_diagnostician", category="Specialists")
+def consult_code_diagnostician(
     issue: str,
     target_file: Optional[str] = None,
     code_snippet: Optional[str] = None,
 ) -> str:
     """
-    Consults the Master Mechanic (kenbun-mec) powered by local Qwen 2.5 Coder on LG 2025.
-    Diagnoses architectural bugs, race conditions, AST faults, and recommends surgical fixes.
+    Diagnoses architectural bugs, race conditions, AST faults, and prescribes surgical repairs
+    using local Qwen 2.5 Coder 14B on LG 2025.
     """
     with silence_stdout():
         repo_root = get_project_root()
@@ -124,11 +123,11 @@ def consult_kenbun_mec(
         user_prompt = f"ISSUE / SYMPTOM:\n{issue}\n\nCONTEXT:\n{full_context}" if full_context else f"ISSUE / SYMPTOM:\n{issue}"
 
         # 3. Query local Qwen Coder model on LG 2025
-        response = _call_lg_lmstudio(MEC_SYSTEM_PROMPT, user_prompt, model=DEFAULT_MEC_MODEL, timeout=60.0)
+        response = _call_lg_lmstudio(DIAGNOSTIC_SYSTEM_PROMPT, user_prompt, model=DEFAULT_MEC_MODEL, timeout=60.0)
 
         if response:
             return json.dumps({
-                "specialist": "kenbun-mec",
+                "specialist": "code-diagnostician",
                 "engine": f"LM Studio ({DEFAULT_MEC_MODEL}) on LG 2025",
                 "diagnosis": response,
                 "status": "DIAGNOSED",
@@ -136,26 +135,28 @@ def consult_kenbun_mec(
 
         # Fallback if local model is offline
         return json.dumps({
-            "specialist": "kenbun-mec",
-            "engine": "Heuristic Garage Fallback (LG 2025 offline)",
+            "specialist": "code-diagnostician",
+            "engine": "Heuristic Diagnostic Fallback (LG 2025 offline)",
             "status": "FALLBACK_DIAGNOSIS",
             "diagnosis": (
-                f"Mechanic quick-scan on '{issue}': Check recent git commits via 'git log -p -1', "
+                f"Diagnostic quick-scan on '{issue}': Inspect recent git commits with 'git log -p -1', "
                 f"verify stderr routing in FastMCP tools, and run 'bin/kenbun-harness audit-complete' "
                 f"on modified files to catch incomplete stubs."
             ),
         }, indent=2)
 
+# Alias for backward compatibility
+consult_kenbun_mec = consult_code_diagnostician
+
 
 # ============================================================================
-# 2. KENBUN-PIT: THE PIT BOSS (INFRA & CLUSTER CHIEF)
+# 2. CLUSTER MONITOR (HARDWARE & CLUSTER NODES)
 # ============================================================================
 
-@sovereign_tool(name="consult_kenbun_pit", category="PitCrew")
-def consult_kenbun_pit(action: str = "status", target: Optional[str] = None) -> str:
+@sovereign_tool(name="consult_cluster_monitor", category="Specialists")
+def consult_cluster_monitor(action: str = "status", target: Optional[str] = None) -> str:
     """
-    Consults the Pit Boss (kenbun-pit). Checks cluster nodes (Mac, Edge_Node, LG 2025),
-    Docker daemon, open ports, and active background tasks.
+    Monitors sovereign cluster nodes (Mac, Edge_Node, LG 2025), port status, and active background tasks.
     """
     with silence_stdout():
         nodes = {
@@ -186,23 +187,25 @@ def consult_kenbun_pit(action: str = "status", target: Optional[str] = None) -> 
         bg_tasks = json.loads(list_background_tasks(limit=5))
 
         return json.dumps({
-            "specialist": "kenbun-pit",
-            "pit_call": "Trackside Cluster Status",
+            "specialist": "cluster-monitor",
+            "operation": "Hardware Cluster Status",
             "cluster_nodes": cluster_status,
             "recent_tasks": bg_tasks.get("tasks", []),
             "verdict": "CLUSTER_READY" if cluster_status["gpu_node"]["status"] == "ONLINE" else "DEGRADED_CLUSTER",
         }, indent=2)
 
+# Alias for backward compatibility
+consult_kenbun_pit = consult_cluster_monitor
+
 
 # ============================================================================
-# 3. KENBUN-DYNO: THE ECU & DYNO TUNER
+# 3. PERFORMANCE TUNER (BAYESIAN ENGINE & WIN RATES)
 # ============================================================================
 
-@sovereign_tool(name="consult_kenbun_dyno", category="PitCrew")
-def consult_kenbun_dyno(metric: str = "status", tool_name: Optional[str] = None) -> str:
+@sovereign_tool(name="consult_performance_tuner", category="Specialists")
+def consult_performance_tuner(metric: str = "status", tool_name: Optional[str] = None) -> str:
     """
-    Consults the Dyno Tuner (kenbun-dyno). Reports Bayesian confidence distributions,
-    database fallback state, top horsepower tools, and latency metrics.
+    Analyzes Bayesian tool win rates, alpha/beta confidence distributions, and database state.
     """
     with silence_stdout():
         from tools.utils.bayesian import get_db_status, get_posterior_params
@@ -218,30 +221,31 @@ def consult_kenbun_dyno(metric: str = "status", tool_name: Optional[str] = None)
                 confidence[t] = {"alpha": a, "beta": b, "win_rate": f"{rate * 100:.1f}%"}
 
         return json.dumps({
-            "specialist": "kenbun-dyno",
-            "dyno_readout": "Bayesian Swarm Horsepower",
+            "specialist": "performance-tuner",
+            "readout": "Bayesian Tool Performance",
             "database_source": db_stat.get("active_source"),
             "fallback_active": db_stat.get("fallback_active"),
             "tool_confidence_curves": confidence,
             "verdict": "TUNED_OPTIMAL" if not db_stat.get("fallback_active") else "OPERATING_ON_SQLITE_BOOST",
         }, indent=2)
 
+# Alias for backward compatibility
+consult_kenbun_dyno = consult_performance_tuner
+
 
 # ============================================================================
-# 4. KENBUN-WIRE: THE AUTO-ELECTRICIAN & AVIONICS SPECIALIST
+# 4. FRAMING SENTINEL (FASTMCP PROTOCOL & STDOUT ISOLATION)
 # ============================================================================
 
-@sovereign_tool(name="consult_kenbun_wire", category="PitCrew")
-def consult_kenbun_wire(component: str = "fastmcp", check_type: str = "framing") -> str:
+@sovereign_tool(name="consult_framing_sentinel", category="Specialists")
+def consult_framing_sentinel(component: str = "fastmcp", check_type: str = "framing") -> str:
     """
-    Consults the Auto-Electrician (kenbun-wire). Verifies FastMCP stdio framing isolation,
-    stdout leak safety, and API/network wire integrity.
+    Audits codebase for unshielded stdout prints that corrupt FastMCP JSON-RPC framing.
     """
     with silence_stdout():
         repo_root = get_project_root()
         stray_prints = []
 
-        # Check core tools for un-silenced prints
         tools_dir = repo_root / "core" / "tools"
         if tools_dir.exists():
             for py_file in tools_dir.rglob("*.py"):
@@ -249,7 +253,6 @@ def consult_kenbun_wire(component: str = "fastmcp", check_type: str = "framing")
                     continue
                 try:
                     txt = py_file.read_text(encoding="utf-8", errors="replace")
-                    # Check for raw print( that isn't inside silence_stdout or commented
                     for line_no, line in enumerate(txt.splitlines(), start=1):
                         sline = line.strip()
                         if sline.startswith("print(") and "debug" not in sline.lower():
@@ -266,32 +269,31 @@ def consult_kenbun_wire(component: str = "fastmcp", check_type: str = "framing")
                     break
 
         return json.dumps({
-            "specialist": "kenbun-wire",
+            "specialist": "framing-sentinel",
             "component": component,
             "framing_check": "PASSED" if not stray_prints else "GROUND_FAULT_WARNING",
             "stray_stdout_prints": stray_prints,
-            "remediation": "Wrap noisy calls in 'with silence_stdout():' or route to logger.debug/stderr.",
+            "remediation": "Wrap noisy prints with 'with silence_stdout():' or route to logger.debug/stderr.",
         }, indent=2)
 
+# Alias for backward compatibility
+consult_kenbun_wire = consult_framing_sentinel
+
 
 # ============================================================================
-# 5. KENBUN-SEC: THE ARMOURED GUARD & LOCKSMITH
+# 5. LEAK SENTINEL (ZERO-LEAK SECURITY & HARDCODED PATHS)
 # ============================================================================
 
-@sovereign_tool(name="consult_kenbun_sec", category="PitCrew")
-def consult_kenbun_sec(scan_type: str = "leak_audit", target_dir: Optional[str] = None) -> str:
+@sovereign_tool(name="consult_leak_sentinel", category="Specialists")
+def consult_leak_sentinel(scan_type: str = "leak_audit", target_dir: Optional[str] = None) -> str:
     """
-    Consults the Armoured Guard (kenbun-sec). Enforces Zero-Leak protocol, scans for
-    hardcoded user paths (/home/*, /Users/*), exposed private keys, and permission status.
+    Scans repository files for hardcoded private user paths, exposed keys, and token leaks.
     """
     with silence_stdout():
-        from tools.security.system_security_sentinel import audit_system_security
         repo_root = get_project_root()
-
         target = Path(target_dir).resolve() if target_dir else repo_root
         leaks = []
 
-        # Fast scan of modified files or target
         try:
             cmd = ["git", "-C", str(repo_root), "status", "--porcelain"]
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
@@ -312,7 +314,7 @@ def consult_kenbun_sec(scan_type: str = "leak_audit", target_dir: Optional[str] 
                     pass
 
         return json.dumps({
-            "specialist": "kenbun-sec",
+            "specialist": "leak-sentinel",
             "scan_type": scan_type,
             "zero_leak_status": "SECURE" if not leaks else "LEAKS_DETECTED",
             "leaks_found": len(leaks),
@@ -320,22 +322,23 @@ def consult_kenbun_sec(scan_type: str = "leak_audit", target_dir: Optional[str] 
             "verdict": "CLEAR_TO_PUSH" if not leaks else "BLOCKED_BY_ARMOURER",
         }, indent=2)
 
+# Alias for backward compatibility
+consult_kenbun_sec = consult_leak_sentinel
+
 
 # ============================================================================
-# 6. KENBUN-DOC: THE FORENSIC HISTORIAN
+# 6. MEMORY ARCHIVIST (POST-MORTEMS & ARCHAEOLOGY)
 # ============================================================================
 
-@sovereign_tool(name="consult_kenbun_doc", category="PitCrew")
-def consult_kenbun_doc(query: str, limit: int = 3) -> str:
+@sovereign_tool(name="consult_memory_archivist", category="Specialists")
+def consult_memory_archivist(query: str, limit: int = 3) -> str:
     """
-    Consults the Forensic Historian (kenbun-doc). Queries historical post-mortems,
-    SYSTEM_MAP.md, and Hivemind concept memories for architectural lineage.
+    Queries past post-mortems, incident resolutions, and Hivemind memories for historical answers.
     """
     with silence_stdout():
         repo_root = get_project_root()
         history_hits = []
 
-        # 1. Search POST_MORTEM.md
         pm_path = repo_root / "POST_MORTEM.md"
         if pm_path.exists():
             try:
@@ -349,7 +352,6 @@ def consult_kenbun_doc(query: str, limit: int = 3) -> str:
             except Exception:
                 pass
 
-        # 2. Search Hivemind concepts
         try:
             from tools.memory.hivemind_tools import search_hivemind_concepts
             hive_res = json.loads(search_hivemind_concepts(query=query))
@@ -359,9 +361,12 @@ def consult_kenbun_doc(query: str, limit: int = 3) -> str:
             pass
 
         return json.dumps({
-            "specialist": "kenbun-doc",
+            "specialist": "memory-archivist",
             "query": query,
             "historical_records_found": len(history_hits),
             "records": history_hits[:limit],
             "verdict": "ARCHIVAL_RECORD_RETRIEVED" if history_hits else "NO_MATCHING_POST_MORTEM",
         }, indent=2)
+
+# Alias for backward compatibility
+consult_kenbun_doc = consult_memory_archivist

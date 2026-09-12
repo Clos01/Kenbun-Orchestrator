@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 🔌 KENBUN-PROTOCOL: FastMCP Framing & Stdout Protocol Isolation Auditor
+# ==============================================================================
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ -f "${DIR}/venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/venv/bin/python"
+elif [ -f "${DIR}/.venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+else
+    PYTHON_BIN="python"
+fi
+
+export PYTHONPATH="${DIR}:${DIR}/core:${PYTHONPATH:-}"
+export PROJECT_ROOT="${DIR}"
+
+exec "$PYTHON_BIN" -c "
+import sys
+import json
+from tools.specialists.pit_crew import consult_framing_sentinel
+
+component = sys.argv[1] if len(sys.argv) > 1 else 'fastmcp'
+
+res = json.loads(consult_framing_sentinel(component=component))
+
+print(f'\033[1m\033[33m🔌 [PROTOCOL FRAMING REPORT]\033[0m Framing Check: {res.get(\"framing_check\")}')
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+prints = res.get('stray_stdout_prints', [])
+if not prints:
+    print('✅ Zero stray stdout prints detected in core tools. Protocol shield secure.')
+else:
+    print(f'⚠️ Found {len(prints)} potential stdout grounding leaks:')
+    for p in prints:
+        print(f'  • {p.get(\"file\")}:{p.get(\"line\")} -> {p.get(\"snippet\")}')
+    print(f'\n💡 Fix: {res.get(\"remediation\")}')
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+" "$@"

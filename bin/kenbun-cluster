@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 🖥️ KENBUN-CLUSTER: Cluster Hardware Nodes & Background Tasks Monitor
+# ==============================================================================
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ -f "${DIR}/venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/venv/bin/python"
+elif [ -f "${DIR}/.venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+else
+    PYTHON_BIN="python"
+fi
+
+export PYTHONPATH="${DIR}:${DIR}/core:${PYTHONPATH:-}"
+export PROJECT_ROOT="${DIR}"
+
+exec "$PYTHON_BIN" -c "
+import sys
+import json
+from tools.specialists.pit_crew import consult_cluster_monitor
+
+action = sys.argv[1] if len(sys.argv) > 1 else 'status'
+target = sys.argv[2] if len(sys.argv) > 2 else None
+
+res = json.loads(consult_cluster_monitor(action=action, target=target))
+
+print(f'\033[1m\033[34m🖥️  [CLUSTER MONITOR REPORT]\033[0m Verdict: {res.get(\"verdict\")}')
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+print('📡 Cluster Nodes:')
+for node, data in res.get('cluster_nodes', {}).items():
+    st = data.get('status')
+    color = '\033[32m' if st == 'ONLINE' else '\033[33m'
+    print(f'  • {node:<10} ({data.get(\"ip\")}) [{data.get(\"role\")}] -> {color}{st}\033[0m')
+
+tasks = res.get('recent_tasks', [])
+print(f'\n⚡ Background Tasks ({len(tasks)}):')
+for t in tasks:
+    print(f'  • Task {t.get(\"task_id\")}: {t.get(\"command\")} [{t.get(\"status\")}]')
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+" "$@"

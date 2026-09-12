@@ -106,6 +106,8 @@ DEFAULT_SYSTEM_TOOLS = {
     "list_background_tasks", "replace_file_content", "audit_execution_completeness",
     "run_isolated_experiment", "consult_kenbun_mec", "consult_kenbun_pit",
     "consult_kenbun_dyno", "consult_kenbun_wire", "consult_kenbun_sec", "consult_kenbun_doc",
+    "consult_code_diagnostician", "consult_cluster_monitor", "consult_performance_tuner",
+    "consult_framing_sentinel", "consult_leak_sentinel", "consult_memory_archivist",
 }
 
 
