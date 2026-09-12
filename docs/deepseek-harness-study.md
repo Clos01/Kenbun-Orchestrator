@@ -1,7 +1,7 @@
 # DeepSeek Harness / Cordis — study & adoption plan
 
 **Sources**
-- Repo: `deepseek-ai/deepseek-harness` @ `0a53fb5` — cloned to `~/Dev/deepseek-harness`, synced to `<REMOTE_NODE>:/repos/deepseek-harness` (scan map: 3,385 `.ts` files / 14,853 symbols; **258 packages**).
+- Repo: `deepseek-ai/deepseek-harness` @ `0a53fb5` — cloned to `~/Dev/deepseek-harness`, synced to `gpu_node:/repos/deepseek-harness` (scan map: 3,385 `.ts` files / 14,853 symbols; **258 packages**).
 - Paper: *A Programming Paradigm for Spatiotemporal Composability* (Shi, Zhang, Cui — Peking University / DeepSeek-AI), 92 pp. `~/Downloads/2608.25512v1.pdf`.
 - Docs: <https://deepseek-harness.github.io/deepseek-harness/en/guide/quickstart>, `deepseek-harness/docs/architecture.md`, `AGENTS.md`.
 
@@ -52,7 +52,7 @@ Unified into the **context paradigm**: one `ctx` tree mediates every effect and 
 
 Ordered so each phase ships value on its own and de-risks the next. Phases 1–4 stay in **Python** (no framework switch); Phase 5 is the optional endgame. Tracked on Planka Main Board as `[DSH-00]`…`[DSH-06]`.
 
-### Progress (2026-08-30 — all on Gitea `main`, deployed to <REMOTE_NODE>)
+### Progress (2026-08-30 — all on Gitea `main`, deployed to gpu_node)
 
 | Phase | State | Landed as |
 |---|---|---|

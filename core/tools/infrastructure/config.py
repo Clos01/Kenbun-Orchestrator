@@ -63,8 +63,8 @@ class TelegramSettings(BaseModel):
     chat_id: Optional[SecretStr] = None
 
 class WorkerSettings(BaseModel):
-    compute_node_ip: str = "127.0.0.1"
-    compute_node_ollama_port: int = 11434
+    p330_ip: str = "127.0.0.1"
+    p330_ollama_port: int = 11434
     ollama_url: str = "http://127.0.0.1:11434/api/generate"
 
 class DeploymentSettings(BaseModel):
@@ -350,15 +350,15 @@ class KenbunSettings(BaseSettings):
         return TelegramSettings(bot_token=self.TELEGRAM_BOT_TOKEN, chat_id=self.TELEGRAM_CHAT_ID)
 
     # --- WORKERS ---
-    ComputeNode_IP_ADDRESS: str = "127.0.0.1"
-    ComputeNode_OLLAMA_PORT: int = 11434
+    P330_IP_ADDRESS: str = "127.0.0.1"
+    P330_OLLAMA_PORT: int = 11434
     OLLAMA_URL: str = "http://127.0.0.1:11434/api/generate"
 
     @property
     def workers(self) -> WorkerSettings:
         return WorkerSettings(
-            compute_node_ip=self.ComputeNode_IP_ADDRESS,
-            compute_node_ollama_port=self.ComputeNode_OLLAMA_PORT,
+            p330_ip=self.P330_IP_ADDRESS,
+            p330_ollama_port=self.P330_OLLAMA_PORT,
             ollama_url=self.OLLAMA_URL
         )
 

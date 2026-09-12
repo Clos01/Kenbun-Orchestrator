@@ -24,7 +24,7 @@ def _path_to_module(file_path: str) -> str:
     Examples (all return `tools.infrastructure.orchestrator`):
       - core/tools/infrastructure/orchestrator.py
       - /app/core/tools/infrastructure/orchestrator.py
-      - /home/user/Dev/Kenbun/core/tools/infrastructure/orchestrator.py
+      - /Users/user/Dev/Kenbun/core/tools/infrastructure/orchestrator.py
 
     Other shapes:
       - tools/utils/llm_router.py     → tools.utils.llm_router  (no `core/`)

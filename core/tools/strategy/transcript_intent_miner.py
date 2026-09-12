@@ -126,15 +126,15 @@ class TranscriptIntentMiner:
                 "name": "homelab-mesh-dns-governor",
                 "domain": "infrastructure",
                 "title": "Homelab Mesh & Sovereign DNS Governor",
-                "description": "Autonomous sentinel monitoring Tailscale peers, Pi-hole DNS blocking, SSH tunnels, and local cluster health across ComputeNode and sentry nodes.",
-                "pattern": r"(pi.?hole|dns blocking|tailscale|mesh|compute_node|legion.?sentry|local cluster)",
+                "description": "Autonomous sentinel monitoring Tailscale peers, Pi-hole DNS blocking, SSH tunnels, and local cluster health across Edge_Node and sentry nodes.",
+                "pattern": r"(pi.?hole|dns blocking|tailscale|mesh|Edge_Node|legion.?sentry|local cluster)",
                 "priority": 92,
                 "triggers": [
                     "managing homelab DNS and Pi-hole instances",
                     "auditing Tailscale mesh topology and peer latency",
-                    "verifying local node health on ComputeNode and sentry servers"
+                    "verifying local node health on Edge_Node and sentry servers"
                 ],
-                "keywords": ["homelab", "mesh", "pi-hole", "dns", "tailscale", "compute_node", "cluster topology"],
+                "keywords": ["homelab", "mesh", "pi-hole", "dns", "tailscale", "Edge_Node", "cluster topology"],
                 "sops": [
                     {"title": "1. Peer Liveness & Routing Verification", "content": "Ping all configured Tailscale nodes and check advertised routes."},
                     {"title": "2. Pi-hole Status Inspection", "content": "Query local DNS server to verify active ad-blocking and upstream resolution."},

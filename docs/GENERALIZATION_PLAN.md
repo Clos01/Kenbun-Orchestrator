@@ -33,8 +33,8 @@
 ### B. Machine-specific hardcoding (bigger portability blocker)
 | Location | Issue |
 |---|---|
-| `update_claude_config.py` | **Plaintext `GEMINI_API_KEY` committed to repo — rotate this key immediately.** Also hardcodes Tailscale host `<REMOTE_NODE_HOSTNAME>`, IP `<ORCHESTRATOR_IP>`, LM Studio port `2065`, and `/Users/<USER_NAME>/...` paths |
-| `claude_desktop_config.json`, `test_mcp.py`, `test_mcp_tools.py` | Hardcoded `/Users/<USER_NAME>/...` paths and Tailscale IPs |
+| `update_claude_config.py` | **Plaintext `GEMINI_API_KEY` committed to repo — rotate this key immediately.** Also hardcodes Tailscale host `<REMOTE_NODE_HOSTNAME>`, IP `<ORCHESTRATOR_IP>`, LM Studio port `2065`, and `/Users/user/...` paths |
+| `claude_desktop_config.json`, `test_mcp.py`, `test_mcp_tools.py` | Hardcoded `/Users/user/...` paths and Tailscale IPs |
 | `core/tests/test_speculative_decoding.py:22` | Hardcoded fallback IP `<ORCHESTRATOR_IP>` |
 | `core/scratch/test_models_direct.py` | Hardcoded Tailscale URL |
 | `core/NEURAL_HIERARCHY.md` | Docs reference "Remote PC (<ORCHESTRATOR_IP>)" |

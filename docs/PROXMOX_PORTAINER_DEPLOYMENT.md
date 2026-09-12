@@ -1,6 +1,6 @@
 # 🏛️ Sovereign Home-Lab: Proxmox VE & Portainer Deployment Guide
 
-This guide provides the exact architectural procedures to convert physical server hardware into an autonomous, headless virtualization node. While we leverage the **Lenovo Low-Wattage Edge Node SFF** as a concrete home-lab reference architecture, these steps apply identically to **any physical workstation** (Dell OptiPlex, HP EliteDesk, custom rigs) or cloud VPS. We will deploy **Proxmox VE** as our Type-1 Hypervisor, provision a highly optimized **Ubuntu Server VM**, bootstrap it with **Portainer CE**, and run the **Kenbun-Agent** container swarm.
+This guide provides the exact architectural procedures to convert physical server hardware into an autonomous, headless virtualization node. While we leverage the **Lenovo ThinkStation Edge_Node SFF** as a concrete home-lab reference architecture, these steps apply identically to **any physical workstation** (Dell OptiPlex, HP EliteDesk, custom rigs) or cloud VPS. We will deploy **Proxmox VE** as our Type-1 Hypervisor, provision a highly optimized **Ubuntu Server VM**, bootstrap it with **Portainer CE**, and run the **Kenbun-Agent** container swarm.
 
 ---
 
@@ -49,7 +49,7 @@ graph TD
 
 ## ⚙️ Universal Hardware Profile & Resource Recommendations
 To deploy a highly performant and cost-efficient sovereign node, we target the following hardware baseline:
-*   **Memory Footprint:** 16GB-64GB RAM (e.g., Lenovo ComputeNode 32GB baseline).
+*   **Memory Footprint:** 16GB-64GB RAM (e.g., Lenovo Edge_Node 32GB baseline).
 *   **Processing Power:** Intel Core i5/i7/i9 or AMD Ryzen / Intel Xeon (typically 4-8 physical cores / 8-16 threads).
 *   **Dynamic Resource Allocation:** 
     *   Our custom bootstrapper dynamically inspects your VM's allocated CPU cores and RAM size.
@@ -68,9 +68,9 @@ Proxmox VE is a bare-metal hypervisor that replaces standard desktop operating s
 3. Download and open [BalenaEtcher](https://etcher.balena.io/) (or Rufus on Windows).
 4. Select the Proxmox ISO, select your USB drive, and click **Flash!**
 
-### 2. Configure the ComputeNode BIOS for Virtualization
+### 2. Configure the Edge_Node BIOS for Virtualization
 To ensure the Proxmox kernel can provision hardware-accelerated guest operating systems:
-1. Turn on the Low-Wattage Edge Node and repeatedly press **`F1`** (or **`Enter`** then select BIOS Utility) to open the Lenovo BIOS.
+1. Turn on the ThinkStation Edge_Node and repeatedly press **`F1`** (or **`Enter`** then select BIOS Utility) to open the Lenovo BIOS.
 2. Navigate to **Advanced** ➔ **CPU Setup**:
     *   Set **Intel (R) Virtualization Technology** to **`Enabled`**.
     *   Set **Intel (R) VT-d** to **`Enabled`**.
@@ -85,13 +85,13 @@ To ensure the Proxmox kernel can provision hardware-accelerated guest operating 
 4. Set a strong **root password** and enter your administrator email.
 5. **Network Configurations:**
     *   **Management Interface:** Select the physical Ethernet port.
-    *   **Hostname:** E.g., `compute_node-node.local` or `kenbun-srv.lan`.
+    *   **Hostname:** E.g., `Edge_Node-node.local` or `kenbun-srv.lan`.
     *   **IP Address:** Assign a static IP on your router's subnet (e.g., `192.168.1.50`).
     *   **Gateway / DNS:** Usually your router's IP (e.g., `192.168.1.1`).
 6. Click **Install**. Once complete, reboot the machine and remove the USB drive.
 
 > [!NOTE]
-> Proxmox is designed to run completely **headless**. You can now disconnect the keyboard, mouse, and monitor from the physical Low-Wattage Edge Node, push it under a desk, and manage everything remotely via your web browser!
+> Proxmox is designed to run completely **headless**. You can now disconnect the keyboard, mouse, and monitor from the physical ThinkStation Edge_Node, push it under a desk, and manage everything remotely via your web browser!
 
 ---
 
@@ -148,7 +148,7 @@ sudo ./ubuntu_vm_bootstrap.sh
 *   Installs **Docker Engine** and **Docker Compose** directly from official Docker repositories.
 *   Provisions **Portainer CE** inside Docker mapping secure HTTPS on port `9443`.
 *   Clones the **Kenbun-Agent** codebase to `/opt/kenbun-agent`.
-*   Writes a **CPU-optimized `.env`** customized to the ComputeNode (quantized `llama3.2:3b` and `nomic-embed-text` on CPU).
+*   Writes a **CPU-optimized `.env`** customized to the Edge_Node (quantized `llama3.2:3b` and `nomic-embed-text` on CPU).
 *   Enables the **UFW Firewall** while keeping rate-limited SSH (`22`) and routing metrics (`3000`, `8001`, `8000`, `8888`, `9443`) open.
 
 ---

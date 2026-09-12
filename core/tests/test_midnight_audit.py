@@ -22,13 +22,13 @@ def test_audit_cluster_hardware():
     res = audit_cluster_hardware()
     assert res["status"] == "ok"
     nodes = res["nodes"]
-    assert "<REMOTE_NODE>" in nodes
-    assert "compute_node" in nodes
+    assert "gpu_node" in nodes
+    assert "Edge_Node" in nodes
     assert "mac_workstation" in nodes
-    assert nodes["<REMOTE_NODE>"]["display_name"] == "Local GPU Server (Legion PC)"
-    assert "RTX 5070 OC" in nodes["<REMOTE_NODE>"]["hardware_type"]
-    assert nodes["compute_node"]["display_name"] == "ComputeNode (Edge Compute Node)"
-    assert "16GB RAM" in nodes["compute_node"]["hardware_type"]
+    assert nodes["gpu_node"]["display_name"] == "LG 2025 (Legion PC)"
+    assert "RTX 5070 OC" in nodes["gpu_node"]["hardware_type"]
+    assert nodes["Edge_Node"]["display_name"] == "Edge_Node (Edge Compute Node)"
+    assert "16GB RAM" in nodes["Edge_Node"]["hardware_type"]
 
 
 def test_audit_database_resilience():
@@ -59,7 +59,7 @@ def test_run_midnight_audit_generates_reports():
 
     saved_json = json.loads(json_path.read_text(encoding="utf-8"))
     assert saved_json["verdict"] == data["verdict"]
-    assert "Local GPU Server (Legion PC)" in md_path.read_text(encoding="utf-8")
+    assert "LG 2025 (Legion PC)" in md_path.read_text(encoding="utf-8")
     assert "Session Replay & Regression Eval Gate" in md_path.read_text(encoding="utf-8")
 
 
@@ -70,8 +70,8 @@ def test_generate_markdown_report():
         "verdict": "HEALTHY",
         "cluster_hardware": {
             "nodes": {
-                "<REMOTE_NODE>": {
-                    "display_name": "Local GPU Server (Legion PC)",
+                "gpu_node": {
+                    "display_name": "LG 2025 (Legion PC)",
                     "hardware_type": "Lenovo Legion Gaming PC (RTX 5070 OC)",
                     "target_ip": "<ORCHESTRATOR_IP>",
                     "services": {"postgres": {"port": 5432, "status": "reachable"}},
@@ -81,7 +81,7 @@ def test_generate_markdown_report():
         "database_resilience": {
             "active_source": "postgresql",
             "fallback_active": False,
-            "remote_node": "Local GPU Server (Legion PC)",
+            "remote_node": "LG 2025 (Legion PC)",
             "primary_reachable": True,
         },
         "code_and_git": {
@@ -95,7 +95,7 @@ def test_generate_markdown_report():
     }
     md = generate_markdown_report(mock_data)
     assert "# 🌙 Kenbun Midnight System Audit Report" in md
-    assert "Local GPU Server (Legion PC)" in md
+    assert "LG 2025 (Legion PC)" in md
     assert "RTX 5070 OC" in md
     assert "297 tracked" in md
 

@@ -32,7 +32,7 @@ from tools.infrastructure.config import settings
 
 # Read from Sovereign Settings
 PC_IP = settings.SWARM_PC_IP
-PORT = settings.workers.compute_node_ollama_port
+PORT = settings.workers.p330_ollama_port
 MODEL = settings.SWARM_MODEL
 
 BASE = f"http://{PC_IP}:{PORT}"
@@ -207,7 +207,7 @@ def main() -> int:
 
   In your Sovereign Settings (core/tools/infrastructure/config.py), verify:
       PC_IP_ADDRESS={PC_IP}
-      ComputeNode_OLLAMA_PORT={PORT}
+      P330_OLLAMA_PORT={PORT}
       SWARM_MODEL={target}
 """)
     return 0

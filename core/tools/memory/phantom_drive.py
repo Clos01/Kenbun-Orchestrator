@@ -209,8 +209,8 @@ if __name__ == "__main__":
         """# System Architecture: Kenbun Sovereign Workbench
 
 - **Host Machine:** Apple Silicon MacBook Pro (Coordinator)
-- **Execution Satellite:** Lenovo Low-Wattage Edge Node (Ubuntu 24.04, Quadro P600 GPU, Tailscale IP: <REMOTE_HOST_IP>)
-- **Local VLM:** UI-TARS-2B + mmproj on ComputeNode Port 8090
+- **Execution Satellite:** Lenovo ThinkStation Edge_Node (Ubuntu 24.04, Quadro P600 GPU, Tailscale IP: <REMOTE_HOST_IP>)
+- **Local VLM:** UI-TARS-2B + mmproj on Edge_Node Port 8090
 - **Display Pipeline:** Xorg on DISPLAY=:0 with HDMI dummy plug, console mirror on Port 5900 (VNC) and Port 3389 (RDP)
 - **Core Orchestrator:** FastMCP running in Kenbun core with System 2 Supervisor audits
 """

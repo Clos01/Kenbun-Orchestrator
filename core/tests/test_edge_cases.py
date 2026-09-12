@@ -11,6 +11,7 @@ if core_dir not in sys.path:
 
 from tools.infrastructure.config import settings
 from tools.strategy.strategy_manager import BayesianGovernor, PulseStatus
+from tools.sensory.imessage_tools import list_imessage_chats, get_imessage_history, send_imessage
 from tools.infrastructure.routers.skills import parse_yaml_frontmatter, validate_skill_metadata
 from tools.infrastructure.api_server import app as api_app
 from tools.infrastructure.proxy_server import app as proxy_app
@@ -221,6 +222,44 @@ class TestEdgeCases:
         assert update_params[3] == 0   # f inc
         assert update_params[4] == "mock_tool"
         assert update_params[5] == "Strategy"
+
+    # ==========================================
+    # 2. iMESSAGE TOOLS EDGE CASES
+    # ==========================================
+
+    @pytest.mark.asyncio
+    async def test_list_imessage_chats_malformed_json(self):
+        """Test list_imessage_chats handles non-JSON garbage output from imsg CLI."""
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 0
+        mock_proc.communicate.return_value = (b"THIS IS NOT VALID JSON", b"")
+        
+        with patch("tools.sensory.imessage_tools.get_imsg_path", return_value="/usr/local/bin/imsg"), \
+             patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            res = await list_imessage_chats()
+            assert not res["success"]
+            assert "Failed to list iMessage chats" in res["error"]
+
+    @pytest.mark.asyncio
+    async def test_get_imessage_history_subprocess_failure(self):
+        """Test get_imessage_history handles non-zero exit code from subprocess."""
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 1
+        mock_proc.communicate.return_value = (b"", b"Error fetching history from macOS DB")
+        
+        with patch("tools.sensory.imessage_tools.get_imsg_path", return_value="/usr/local/bin/imsg"), \
+             patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            res = await get_imessage_history(chat_id=99)
+            assert not res["success"]
+            assert "Error fetching history from macOS DB" in res["error"]
+
+    @pytest.mark.asyncio
+    async def test_send_imessage_empty_service(self):
+        """Test send_imessage with invalid service parameter."""
+        with patch("tools.sensory.imessage_tools.get_imsg_path", return_value="/usr/local/bin/imsg"):
+            res = await send_imessage(to="+1555", text="hello", service="invalid_service")
+            assert not res["success"]
+            assert "Invalid service" in res["error"]
 
     # ==========================================
     # 3. SKILLS MANAGEMENT ENDPOINTS EDGE CASES

@@ -25,7 +25,7 @@ SENTRY_USER = os.getenv("SENTRY_USER", "")
 SENTRY_PASSWORD = os.getenv("SENTRY_PASSWORD", "")
 PIHOLE_PASSWORD = os.getenv("PIHOLE_PASSWORD", "")
 
-# In-memory session cache for Local DNS Sinkhole API
+# In-memory session cache for Pi-hole v6 API
 _SESSION_CACHE: Dict[str, Any] = {
     "sid": None,
     "host": None,
@@ -86,7 +86,7 @@ def _get_ssh_client() -> Tuple[Any, str]:
 
 
 def _get_authenticated_sid(host: str) -> Optional[str]:
-    """Retrieve or refresh cached session SID from Local DNS Sinkhole API."""
+    """Retrieve or refresh cached session SID from Pi-hole v6 API."""
     now = time.time()
     if _SESSION_CACHE.get("sid") and _SESSION_CACHE.get("host") == host and now < _SESSION_CACHE.get("expires_at", 0):
         return _SESSION_CACHE["sid"]
@@ -213,7 +213,7 @@ def _fetch_node_identity(host: str, sid: str) -> Dict[str, Any]:
 
 
 def _fetch_pihole_telemetry() -> Dict[str, Any]:
-    """Fetch live system telemetry from Local DNS Sinkhole API or SSH fallback."""
+    """Fetch live system telemetry from Pi-hole v6 API or SSH fallback."""
     target_hosts = [SENTRY_HOST, SENTRY_TAILSCALE]
 
     for host in target_hosts:

@@ -2,7 +2,7 @@
 """
 Dynamic Cluster Mesh & Zero-Drift Configuration Synthesizer
 ===========================================================
-Autonomously probes the Kenbun multi-node cluster (Local GPU Server, ComputeNode, Local Mac, Pi),
+Autonomously probes the Kenbun multi-node cluster (LG 2025, Edge_Node, Local Mac, Pi),
 resolves active service endpoints (PostgreSQL, ChromaDB, LM Studio, Honcho),
 guards against Tailscale LAN subnet collisions, and generates synchronized,
 drift-free mcp_config.json files across all nodes.
@@ -35,27 +35,27 @@ def probe_socket(host: str, port: int, timeout: float = 1.5) -> bool:
 
 
 def get_local_node_type() -> str:
-    """Identifies whether the script is running on Mac, ComputeNode, or Local GPU Server."""
+    """Identifies whether the script is running on Mac, Edge_Node, or LG 2025."""
     system = platform.system().lower()
     if system == "darwin":
         return "mac_workstation"
 
     try:
         hostname = socket.gethostname().lower()
-        if "automation" in hostname or "compute_node" in hostname:
-            return "compute_node"
+        if "automation" in hostname or "Edge_Node" in hostname:
+            return "Edge_Node"
         if "legion" in hostname:
             return "sentry"
     except Exception:
         pass
 
     if (Path.home() / "Dev" / "Kenbun").exists():
-        return "compute_node"
+        return "Edge_Node"
     return "unknown"
 
 
 def resolve_cluster_endpoints() -> Dict[str, Any]:
-    """Probes Local GPU Server and determines the optimal working IP/port for each service."""
+    """Probes LG 2025 and determines the optimal working IP/port for each service."""
     lg_host = "<ORCHESTRATOR_IP>"
     lg_sidecar = "<VECTOR_DB_IP>"
 
@@ -131,12 +131,12 @@ def generate_node_mcp_config(node_type: str, endpoints: Dict[str, Any]) -> Dict[
         server_path = str(kenbun_root / "core" / "tools" / "infrastructure" / "server.py")
         proj_root = str(kenbun_root)
         python_path = f"{proj_root}/core:{proj_root}/core/tools:{proj_root}"
-    else:  # ComputeNode (Edge Compute Node)
+    else:  # Edge_Node (Edge Compute Node)
         if platform.system().lower() == "linux":
             kenbun_root = local_home / "Dev" / "Kenbun"
         else:
-            # Constructed dynamically for remote ComputeNode node when running from Mac
-            kenbun_root = Path(os.sep + "home") / "<USER>" / "Dev" / "Kenbun"
+            # Constructed dynamically for remote Edge_Node node when running from Mac
+            kenbun_root = Path(os.sep + "home") / "user" / "Dev" / "Kenbun"
         py_bin = str(kenbun_root / "venv" / "bin" / "python")
         server_path = str(kenbun_root / "core" / "tools" / "infrastructure" / "server.py")
         proj_root = str(kenbun_root)
@@ -192,11 +192,11 @@ def write_local_configs(config: Dict[str, Any]) -> list[str]:
     return written
 
 
-def sync_remote_compute_node(endpoints: Dict[str, Any]) -> Dict[str, Any]:
-    """Syncs configuration to ComputeNode over SSH."""
-    compute_node_ip = os.getenv("COMPUTE_NODE_IP", "127.0.0.1")
-    compute_node_cfg = generate_node_mcp_config("compute_node", endpoints)
-    cfg_json = json.dumps(compute_node_cfg)
+def sync_remote_p330(endpoints: Dict[str, Any]) -> Dict[str, Any]:
+    """Syncs configuration to Edge_Node over SSH."""
+    p330_ip = os.getenv("COMPUTE_NODE_IP", "127.0.0.1")
+    p330_cfg = generate_node_mcp_config("Edge_Node", endpoints)
+    cfg_json = json.dumps(p330_cfg)
 
     remote_cmd = f"""
 python3 -c '
@@ -212,9 +212,9 @@ for d in [Path.home() / ".gemini" / sub for sub in ["config", "antigravity", "an
     try:
         subprocess.check_call([
             "ssh", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=3",
-            f"<USER>@{compute_node_ip}", remote_cmd
+            f"user@{p330_ip}", remote_cmd
         ])
-        return {"status": "success", "peer": f"<USER>@{compute_node_ip}"}
+        return {"status": "success", "peer": f"user@{p330_ip}"}
     except Exception as e:
         return {"status": "failed", "error": str(e)}
 
@@ -229,14 +229,14 @@ def run_full_mesh_audit(sync_peers: bool = True) -> Dict[str, Any]:
 
     remote_res = None
     if sync_peers and local_node == "mac_workstation":
-        remote_res = sync_remote_compute_node(endpoints)
+        remote_res = sync_remote_p330(endpoints)
 
     return {
         "local_node": local_node,
         "endpoints": endpoints,
         "tailscale_guard": lan_guard,
         "written_local_configs": written_files,
-        "remote_compute_node_sync": remote_res
+        "remote_p330_sync": remote_res
     }
 
 

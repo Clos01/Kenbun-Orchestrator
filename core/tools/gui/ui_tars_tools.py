@@ -45,7 +45,7 @@ Output ONLY a valid JSON array of action strings."""
 @sovereign_tool()
 def trigger_ui_tars(goal: Union[str, Dict[str, Any]]) -> str:
     """
-    Motor-Cortex UI-TARS Autonomous Visual Executor with Multi-Engine Routing (Playwright + ComputeNode Satellite).
+    Motor-Cortex UI-TARS Autonomous Visual Executor with Multi-Engine Routing (Playwright + Edge_Node Satellite).
     
     Supports:
     1. Direct English directive: 'Open Firefox and navigate to https://enterpriseapp.ai'
@@ -165,13 +165,13 @@ print("="*50)
 
     cmd_write = [
         "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", 
-        "<USER>@<REMOTE_HOST_IP>", 
+        "user@<REMOTE_HOST_IP>", 
         f"cat << 'EOF_MARKER' > /tmp/run_e2e_tars.py\n{python_script}\nEOF_MARKER"
     ]
     
     cmd_run = [
         "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", 
-        "<USER>@<REMOTE_HOST_IP>", 
+        "user@<REMOTE_HOST_IP>", 
         "DISPLAY=:0 python3 -u /tmp/run_e2e_tars.py"
     ]
     

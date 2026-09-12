@@ -7,7 +7,7 @@ Covers:
 - POST /swarm/sovereignty/sync – trigger autonomic regression analysis
 - GET  /swarm/sovereignty/status – read recent sovereignty log
 - POST /dispatch/claude        – send a task to the Claude Code CLI agent
-- GET  /dispatch/compute_node/status   – ping the ComputeNode worker
+- GET  /dispatch/Edge_Node/status   – ping the Edge_Node worker
 """
 
 import asyncio
@@ -25,7 +25,7 @@ from tools.infrastructure.server_deps import verify_authorization
 from tools.infrastructure.orchestrator import orchestrate
 from tools.audit.guardrail_agent import guardrail_agent
 from tools.execution.claude_code_agent import claude_code_agent
-from tools.execution.compute_node_worker import compute_node_worker
+from tools.execution.p330_worker import p330_worker
 from tools.autonomic.autonomic_corrector import corrector
 
 router = APIRouter()
@@ -304,6 +304,6 @@ async def dispatch_to_claude(payload: dict):
     }
 
 
-@router.get("/dispatch/compute_node/status")
-async def compute_node_status():
-    return compute_node_worker.ping()
+@router.get("/dispatch/Edge_Node/status")
+async def p330_status():
+    return p330_worker.ping()

@@ -271,7 +271,7 @@ class MobileReplyRequest(BaseModel):
     lead_id: Optional[str] = Field("", max_length=100, description="Lead ID from subject line")
     company_name: Optional[str] = Field("Acme Commercial Builders", max_length=150, description="Target company")
     client_name: Optional[str] = Field("John Doe", max_length=100, description="Target client name")
-    address: Optional[str] = Field("100 Market St, Suite 200", max_length=200, description="Address")
+    address: Optional[str] = Field("100 Market St, Suite 200, Metro City", max_length=200, description="Address")
     target_email: Optional[str] = Field("partner@example.com", max_length=150, description="Target recipient email")
 
 

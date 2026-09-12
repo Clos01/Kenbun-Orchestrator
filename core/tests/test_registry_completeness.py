@@ -44,3 +44,4 @@ def test_build_pipeline_tools_dynamic_resolution():
     # Verify dynamically harvested tools are also present
     assert "browser_navigate" in tools
     assert "computer_use" in tools
+    assert "send_imessage" in tools

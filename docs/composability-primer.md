@@ -185,7 +185,7 @@ template. It needs to be true of *every* capability, not just subagents.
 → `6cd3785` (s2) → `15ec53f`/`54a19f9` (Observatory panel) → `becfe22` (s3) →
 `99eb154` (extract `CapabilityResolver`) → `96debee` (s4) → `578632d` (s5, memory)
 → `e8b9f7f` (DSH‑02 s2) → `e2b1702` (DSH‑05 s2) → `23b3f55` (DSH‑03 s2) →
-`e680f35` (DSH‑05 hooks). ~300 tests, zero regressions. Deployed to <REMOTE_NODE>.
+`e680f35` (DSH‑05 hooks). ~300 tests, zero regressions. Deployed to gpu_node.
 
 ### DSH‑06 in detail
 

@@ -109,7 +109,7 @@ insufficiency of it.
 **All MCP clients should use the same transport:**
 
 ```
-ssh <REMOTE_NODE> docker exec -i portable_fastmcp python -m tools.infrastructure.server
+ssh gpu_node docker exec -i portable_fastmcp python -m tools.infrastructure.server
 ```
 
 > **Incident (2026-08-11).** Claude Code used the container; Antigravity's

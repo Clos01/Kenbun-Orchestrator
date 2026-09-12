@@ -2,7 +2,7 @@
 SwitchYard - Local-First Cost Escalation Router for Kenbun.
 
 Inspired by NVIDIA SwitchYard and NeMo Routing Architecture:
-Routes requests to the lowest-cost tier (Free Local ComputeNode VLM/LLM) first,
+Routes requests to the lowest-cost tier (Free Local Edge_Node VLM/LLM) first,
 evaluates result quality, and seamlessly escalates to Cloud Turbo / Deep Architect
 tiers only when required—slashing LLM costs by 80%+.
 """
@@ -18,7 +18,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 
 class ModelTier(str, Enum):
-    TIER_0_LOCAL = "Tier 0 (Free Local ComputeNode / Hardware)"
+    TIER_0_LOCAL = "Tier 0 (Free Local Edge_Node / Hardware)"
     TIER_1_TURBO = "Tier 1 (Cloud Fast / Gemini 2.0 Flash)"
     TIER_2_ARCHITECT = "Tier 2 (Cloud Deep / Claude 3.7 Sonnet / Opus)"
 
@@ -29,10 +29,10 @@ class SwitchyardRouter:
     def __init__(
         self,
         local_vlm_url: str = "http://<REMOTE_HOST_IP>:8090/v1",
-        compute_node_host: str = "<REMOTE_HOST_IP>"
+        p330_host: str = "<REMOTE_HOST_IP>"
     ):
         self.local_vlm_url = local_vlm_url
-        self.compute_node_host = compute_node_host
+        self.p330_host = p330_host
 
         # Telemetry state
         self.total_requests: int = 0
@@ -47,7 +47,7 @@ class SwitchyardRouter:
         """Heuristic task classifier to select the most economical entry tier."""
         task_lower = task.lower()
 
-        # GUI / Coordinate / Visual Action tasks belong on Local ComputeNode (Tier 0)
+        # GUI / Coordinate / Visual Action tasks belong on Local Edge_Node (Tier 0)
         if is_visual or any(k in task_lower for k in ["click", "coordinate", "desktop", "dock", "move mouse", "point"]):
             return ModelTier.TIER_0_LOCAL
 
@@ -62,7 +62,7 @@ class SwitchyardRouter:
         return ModelTier.TIER_1_TURBO
 
     def check_local_health(self) -> bool:
-        """Verify if the local ComputeNode inference server is accessible."""
+        """Verify if the local Edge_Node inference server is accessible."""
         url = f"{self.local_vlm_url.replace('/v1', '')}/health"
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "Kenbun-SwitchYard"})
@@ -94,7 +94,7 @@ class SwitchyardRouter:
         if initial_tier == ModelTier.TIER_0_LOCAL:
             attempted_tiers.append(ModelTier.TIER_0_LOCAL.value)
             if self.check_local_health():
-                res = self._call_local_compute_node(task, system_prompt, image_b64)
+                res = self._call_local_p330(task, system_prompt, image_b64)
                 if res and (validator is None or validator(res)):
                     self.tier_counts[ModelTier.TIER_0_LOCAL.value] += 1
                     self.estimated_cost_avoided_usd += 0.005
@@ -145,8 +145,8 @@ class SwitchyardRouter:
             "cost_saved_usd": 0.0
         }
 
-    def _call_local_compute_node(self, task: str, system_prompt: str, image_b64: Optional[str]) -> Optional[str]:
-        """Query local llama.cpp / UI-TARS server on ComputeNode."""
+    def _call_local_p330(self, task: str, system_prompt: str, image_b64: Optional[str]) -> Optional[str]:
+        """Query local llama.cpp / UI-TARS server on Edge_Node."""
         messages: List[Dict[str, Any]] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})

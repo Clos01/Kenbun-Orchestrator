@@ -1,11 +1,11 @@
-# 🤖 n8n Workflow Deployment (Target Server: compute_node)
+# 🤖 n8n Workflow Deployment (Target Server: Edge_Node)
 
-This document maps the deployment configuration for running a secure **n8n** automation instance on the **compute_node** target server.
+This document maps the deployment configuration for running a secure **n8n** automation instance on the **Edge_Node** target server.
 
 ---
 
 ## 1. Run n8n Locally
-The n8n service runs containerized on the **compute_node** server (typically binding to port `5678`). In the Docker compose stack, configure n8n with the crucial environment variable to handle public webhook callback signatures:
+The n8n service runs containerized on the **Edge_Node** server (typically binding to port `5678`). In the Docker compose stack, configure n8n with the crucial environment variable to handle public webhook callback signatures:
 
 ```env
 WEBHOOK_URL=https://n8n.yourdomain.com/
@@ -14,7 +14,7 @@ WEBHOOK_URL=https://n8n.yourdomain.com/
 ---
 
 ## 2. Configure Cloudflare Tunnel (`cloudflared`)
-Run the Cloudflare Tunnel daemon (`cloudflared`) as a sidecar container in the same Docker network stack on the **compute_node** host.
+Run the Cloudflare Tunnel daemon (`cloudflared`) as a sidecar container in the same Docker network stack on the **Edge_Node** host.
 
 1. In the **Cloudflare Zero Trust Dashboard**, create a new tunnel and link it to your domain.
 2. Route a public subdomain (e.g., `n8n.yourdomain.com`) through the tunnel to the local service:

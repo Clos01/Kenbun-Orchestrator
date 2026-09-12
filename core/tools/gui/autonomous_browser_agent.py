@@ -2,8 +2,8 @@
 Autonomous Hybrid Browser & GUI Agent (Kenbun Sensory & Motor Cortex).
 Enables AI-to-AI browser orchestration with Multi-Engine Routing:
 1. Mode 'playwright': High-speed DOM automation, headless evaluation, screenshot & structured JSON data extraction.
-2. Mode 'ui_tars': Full vision-native UI-TARS Closed-Loop execution on the ComputeNode satellite (DISPLAY=:0).
-3. Mode 'hybrid': Fast Playwright DOM navigation with automatic escalation to ComputeNode UI-TARS on bot/visual blockers.
+2. Mode 'ui_tars': Full vision-native UI-TARS Closed-Loop execution on the Edge_Node satellite (DISPLAY=:0).
+3. Mode 'hybrid': Fast Playwright DOM navigation with automatic escalation to Edge_Node UI-TARS on bot/visual blockers.
 """
 
 from __future__ import annotations
@@ -45,8 +45,8 @@ class AutonomousBrowserAgent:
         satellite_user: Optional[str] = None,
         default_timeout: int = 45
     ):
-        self.satellite_ip = satellite_ip or os.environ.get("ComputeNode_IP", os.environ.get("SATELLITE_IP", "127.0.0.1"))
-        self.satellite_user = satellite_user or os.environ.get("ComputeNode_USER", os.environ.get("SATELLITE_USER", "<USER>"))
+        self.satellite_ip = satellite_ip or os.environ.get("P330_IP", os.environ.get("SATELLITE_IP", "127.0.0.1"))
+        self.satellite_user = satellite_user or os.environ.get("P330_USER", os.environ.get("SATELLITE_USER", "user"))
         self.default_timeout = default_timeout
 
     def run(
@@ -60,7 +60,7 @@ class AutonomousBrowserAgent:
         headless: bool = True
     ) -> Dict[str, Any]:
         """
-        Executes autonomous browser task across Playwright or ComputeNode UI-TARS.
+        Executes autonomous browser task across Playwright or Edge_Node UI-TARS.
         Returns machine-readable JSON receipt.
         """
         session_id = session_id or f"sess_{uuid.uuid4().hex[:8]}"
@@ -71,8 +71,8 @@ class AutonomousBrowserAgent:
 
         if mode_lower == "playwright":
             result = self.execute_playwright(url, goal, actions, extract_fields, session_id, headless)
-        elif mode_lower in ("ui_tars", "compute_node", "ssh"):
-            result = self.execute_compute_node_ssh_tars(goal, url, session_id)
+        elif mode_lower in ("ui_tars", "Edge_Node", "ssh"):
+            result = self.execute_p330_ssh_tars(goal, url, session_id)
         else: # "hybrid" (default)
             result = self.execute_hybrid(url, goal, actions, extract_fields, session_id, headless)
 
@@ -283,13 +283,13 @@ const fs = require('fs');
                 "execution_trace": []
             }
 
-    def execute_compute_node_ssh_tars(
+    def execute_p330_ssh_tars(
         self,
         goal: str,
         url: str,
         session_id: str = "default_session"
     ) -> Dict[str, Any]:
-        """Dispatches visual motor cortex execution to ComputeNode satellite on DISPLAY=:0."""
+        """Dispatches visual motor cortex execution to Edge_Node satellite on DISPLAY=:0."""
         from tools.gui.ui_tars_tools import decompose_goal_into_micro_actions
 
         url_clean = url.rstrip(".")
@@ -337,7 +337,7 @@ for idx, action_item in enumerate(micro_plan, 1):
 
 output_envelope = {{
     "status": "SUCCESS",
-    "engine_used": "ui_tars_compute_node",
+    "engine_used": "ui_tars_p330",
     "target_url": "{url_clean}",
     "execution_trace": execution_trace,
     "steps_completed": len(execution_trace)
@@ -361,7 +361,7 @@ print("JSON_END")
         cmd_write = [
             "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
             f"{self.satellite_user}@{self.satellite_ip}",
-            f"cat << 'EOF_ComputeNode' > /tmp/run_auto_browser_{session_id}.py\n{remote_script}\nEOF_ComputeNode"
+            f"cat << 'EOF_P330' > /tmp/run_auto_browser_{session_id}.py\n{remote_script}\nEOF_P330"
         ]
         
         cmd_run = [
@@ -382,7 +382,7 @@ print("JSON_END")
             
             return {
                 "status": "SUCCESS",
-                "engine_used": "ui_tars_compute_node",
+                "engine_used": "ui_tars_p330",
                 "target_url": url,
                 "raw_output": raw_text,
                 "execution_trace": []
@@ -390,7 +390,7 @@ print("JSON_END")
         except Exception as e:
             return {
                 "status": "FAILED",
-                "engine_used": "ui_tars_compute_node",
+                "engine_used": "ui_tars_p330",
                 "target_url": url,
                 "error": str(e),
                 "execution_trace": []
@@ -407,7 +407,7 @@ print("JSON_END")
     ) -> Dict[str, Any]:
         """
         Attempts ultra-fast Playwright DOM first; if bot-blocked, CAPTCHA detected,
-        or interactive steps fail, automatically escalates to ComputeNode UI-TARS.
+        or interactive steps fail, automatically escalates to Edge_Node UI-TARS.
         """
         pw_result = self.execute_playwright(url, goal, actions, extract_fields, session_id, headless)
 
@@ -421,8 +421,8 @@ print("JSON_END")
         if not needs_escalation:
             return pw_result
 
-        logger.warning(f"⚠️ [Hybrid Auto-Escalate] Playwright encounter issue ({pw_result.get('status')}). Escalating to ComputeNode UI-TARS Motor Cortex...")
-        tars_result = self.execute_compute_node_ssh_tars(goal, url, session_id)
+        logger.warning(f"⚠️ [Hybrid Auto-Escalate] Playwright encounter issue ({pw_result.get('status')}). Escalating to Edge_Node UI-TARS Motor Cortex...")
+        tars_result = self.execute_p330_ssh_tars(goal, url, session_id)
         tars_result["hybrid_escalated"] = True
         tars_result["playwright_attempt"] = pw_result
         return tars_result
@@ -441,9 +441,9 @@ def dispatch_autonomous_browser(
     Autonomous Multi-Engine Browser & GUI Agent for AI-to-AI Interoperability.
     
     Modes:
-    - 'hybrid' (Default): Ultra-fast Playwright DOM execution with auto-fallback to ComputeNode UI-TARS Vision on blockers.
+    - 'hybrid' (Default): Ultra-fast Playwright DOM execution with auto-fallback to Edge_Node UI-TARS Vision on blockers.
     - 'playwright': High-speed DOM extraction, headless actions, and instant JSON data extraction.
-    - 'ui_tars' / 'compute_node': Full vision-native UI-TARS Closed-Loop execution on the remote ComputeNode GPU satellite (DISPLAY=:0).
+    - 'ui_tars' / 'Edge_Node': Full vision-native UI-TARS Closed-Loop execution on the remote Edge_Node GPU satellite (DISPLAY=:0).
     
     Args:
         url: Target web URL (e.g. 'https://enterpriseapp.ai').

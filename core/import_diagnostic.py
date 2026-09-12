@@ -11,7 +11,7 @@ modules_to_test = [
     "tools.strategy.intelligence_engine",
     "tools.audit.guardrail_agent",
     "tools.execution.claude_code_agent",
-    "tools.execution.compute_node_worker",
+    "tools.execution.p330_worker",
     "tools.utils.workspace_manager",
     "tools.strategy.token_governor",
     "tools.autonomic.autonomic_corrector",

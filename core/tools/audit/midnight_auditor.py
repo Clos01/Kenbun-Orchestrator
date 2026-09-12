@@ -1,8 +1,8 @@
 """Kenbun Midnight System Audit Engine
 ===================================
 Executes automated midnight system verification across 5 pillars:
-1. Cluster Hardware Topology & Reachability (Local GPU Server, ComputeNode, Local Mac, Legion Sentry)
-2. Database & Resilience Status (PostgreSQL on Local GPU Server vs Local Mac SQLite fallback)
+1. Cluster Hardware Topology & Reachability (LG 2025, Edge_Node, Local Mac, Legion Sentry)
+2. Database & Resilience Status (PostgreSQL on LG 2025 vs Local Mac SQLite fallback)
 3. Memory & Vector Store Readiness (SQLite Intelligence DB, ChromaDB, Honcho)
 4. Code & Git Integrity (uncommitted changes, AST syntax validation)
 5. Tool Telemetry & Bayesian Posterior Distributions
@@ -101,7 +101,7 @@ def audit_database_resilience() -> Dict[str, Any]:
         return {
             "status": "ok",
             "primary_reachable": db_stat.get("primary_reachable", False),
-            "remote_node": db_stat.get("remote_node", "Local GPU Server (Legion PC)"),
+            "remote_node": db_stat.get("remote_node", "LG 2025 (Legion PC)"),
             "active_source": db_stat.get("active_source", "unknown"),
             "fallback_active": db_stat.get("fallback_active", False),
             "last_fallback": db_stat.get("last_fallback"),

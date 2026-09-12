@@ -423,7 +423,7 @@ def _spec_endpoints():
     """The escalation ladder for spec generation, strongest rung first.
 
     Wireframe specs are a structured-output task, and the default gateway rung is
-    whatever PRIMARY_LLM_MODEL happens to be — on <REMOTE_NODE> that is a local
+    whatever PRIMARY_LLM_MODEL happens to be — on gpu_node that is a local
     completion-style Ollama model (kenbun-cto) that ignores the system prompt and
     simply continues the user's sentence. Its reply is non-empty, so
     call_llm_gateway counts it a success and never advances to its own fallback;

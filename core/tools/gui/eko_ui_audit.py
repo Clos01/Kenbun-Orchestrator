@@ -1,14 +1,14 @@
-"""Short UI-TARS usability audit. Runs ON compute_node (needs DISPLAY=:0). Emits JSON."""
+"""Short UI-TARS usability audit. Runs ON Edge_Node (needs DISPLAY=:0). Emits JSON."""
 import io, os, sys, json, time, base64, subprocess
 import requests
 from PIL import ImageGrab
 
 os.environ["DISPLAY"] = ":0"
 
-BASE     = os.environ.get("CLIENT_BASE", "http://<CLIENT_IP>:3000")
+BASE     = os.environ.get("EKO_BASE", "http://<CLIENT_IP>:3000")
 ENDPOINT = "http://127.0.0.1:8090/v1/chat/completions"
 MODEL    = "/models/UI-TARS-2B-SFT-Q4_K_M.gguf"
-OUT      = "/tmp/client_audit"
+OUT      = "/tmp/eko_audit"
 RES      = (1120, 630)   # below this UI-TARS-2B cannot read UI text at all
 
 PAGES = [

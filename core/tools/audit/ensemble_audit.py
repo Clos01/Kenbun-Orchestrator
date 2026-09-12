@@ -19,7 +19,7 @@ from tools.infrastructure.config import settings
 @dataclass
 class AuditConfig:
     pc_ip: str = settings.SWARM_PC_IP
-    ollama_port: int = settings.workers.compute_node_ollama_port
+    ollama_port: int = settings.workers.p330_ollama_port
     log_dir: Path = settings.BRAIN_HEALTH_DIR
     log_file: str = "audit_history.jsonl"
     

@@ -1,5 +1,5 @@
 """
-UI-TARS functional test for Client App. Runs ON compute_node (needs DISPLAY=:0).
+UI-TARS functional test for Client App. Runs ON Edge_Node (needs DISPLAY=:0).
 
 Each UI-TARS look costs ~40s and is prompt/vision-bound, not generation-bound
 (measured: 183 prompt tok -> 7.1s, 959 prompt tok -> 41.8s, output length
@@ -20,10 +20,10 @@ from PIL import ImageGrab
 
 os.environ["DISPLAY"] = ":0"
 
-BASE     = os.environ.get("CLIENT_BASE", "http://<CLIENT_IP>:3001")
+BASE     = os.environ.get("EKO_BASE", "http://<CLIENT_IP>:3001")
 ENDPOINT = "http://127.0.0.1:8090/v1/chat/completions"
 MODEL    = "/models/UI-TARS-2B-SFT-Q4_K_M.gguf"
-OUT      = "/tmp/client_test"
+OUT      = "/tmp/eko_test"
 RES      = (1120, 630)          # below this UI-TARS-2B cannot read UI text
 SIDEBAR_PX = 200                # left nav renders instantly; exclude it
 TIMEOUT_S  = 30.0

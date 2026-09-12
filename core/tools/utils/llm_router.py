@@ -376,7 +376,7 @@ def _try_endpoint(
             or "lmstudio" in url.lower()
             or (settings.SWARM_PC_IP and settings.SWARM_PC_IP in url)
             or str(settings.models.lm_studio_port) in url
-            or "<REMOTE_NODE>" in url.lower()
+            or "gpu_node" in url.lower()
         )
         if is_lmstudio:
             ensure_lmstudio_model_loaded(

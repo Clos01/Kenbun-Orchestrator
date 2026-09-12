@@ -43,7 +43,7 @@ class TestFlooringTargetEngine(unittest.TestCase):
 
     def test_commercial_pm_classification(self):
         lead = FlooringLeadInput(
-            address="500 Fayetteville St #200, Raleigh, NC",
+            address="500 Fayetteville St #200, Metropolitan Area",
             contractor_name="Summit Commercial Contracting",
             permit_type="Commercial Interior Alteration",
             valuation=320000.0,
@@ -61,7 +61,7 @@ class TestFlooringTargetEngine(unittest.TestCase):
 
     def test_high_end_designer_classification(self):
         lead = FlooringLeadInput(
-            address="220 Country Club Dr, Raleigh, NC",
+            address="220 Country Club Dr, Metropolitan Area",
             contractor_name="Vanguard Architecture & Interior Design",
             permit_type="Residential Addition / Remodel",
             valuation=480000.0,
@@ -77,7 +77,7 @@ class TestFlooringTargetEngine(unittest.TestCase):
 
     def test_volume_flipper_classification(self):
         lead = FlooringLeadInput(
-            address="714 E Martin St, Raleigh, NC",
+            address="714 E Martin St, Metropolitan Area",
             contractor_name="Triangle Turnkey Properties LLC",
             permit_type="Residential Alteration",
             valuation=58000.0,
@@ -138,7 +138,7 @@ class TestFlooringTargetEngine(unittest.TestCase):
     def test_edge_case_extreme_values_sanitization(self):
         # Extreme tiny permit ($1,000 repair)
         small_lead = FlooringLeadInput(
-            address="5 Small St, Raleigh, NC",
+            address="5 Small St, Metropolitan Area",
             valuation=1000.0,
             total_sqft=100.0,
             description="Minor repair"
@@ -149,7 +149,7 @@ class TestFlooringTargetEngine(unittest.TestCase):
 
         # Extreme mega development ($30M complex)
         mega_lead = FlooringLeadInput(
-            address="1 Mega Tower Pl, Raleigh, NC",
+            address="1 Mega Tower Pl, Metropolitan Area",
             valuation=30000000.0,
             total_sqft=0.0,
             description="Commercial high-rise medical center"

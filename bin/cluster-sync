@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # 🛰️ Kenbun Cluster Synchronizer (bin/cluster-sync)
-# Flawlessly mirrors Mac Sovereign Workbench to edge_node Satellite & Sovereign Gitea
+# Flawlessly mirrors Mac Sovereign Workbench to Edge_Node Satellite & Sovereign Gitea
 # ==============================================================================
 set -euo pipefail
 
@@ -26,16 +26,16 @@ if [ -f "${PYTHON_BIN}" ]; then
     "${PYTHON_BIN}" "${DIR}/core/tools/infrastructure/dynamic_cluster_mesh.py" || echo -e "${YELLOW}⚠️ Dynamic mesh probe completed with warnings.${NC}"
 fi
 
-# 1. Sync to edge_node Edge Compute Node (Headless Execution Satellite)
-echo -e "\n${BLUE}➔ Mirroring to edge_node (<REMOTE_HOST_IP>)...${NC}"
-if git remote | grep -q "edge_node"; then
-    if git push -f edge_node "${CURRENT_BRANCH}"; then
-        echo -e "${GREEN}✓ edge_node working tree synchronized to ${CURRENT_BRANCH}.${NC}"
+# 1. Sync to Edge_Node Edge Compute Node (Headless Execution Satellite)
+echo -e "\n${BLUE}➔ Mirroring to Edge_Node (<REMOTE_HOST_IP>)...${NC}"
+if git remote | grep -q "Edge_Node"; then
+    if git push -f Edge_Node "${CURRENT_BRANCH}"; then
+        echo -e "${GREEN}✓ Edge_Node working tree synchronized to ${CURRENT_BRANCH}.${NC}"
     else
-        echo -e "${YELLOW}⚠️ Failed to push to edge_node. Check Tailscale connectivity.${NC}"
+        echo -e "${YELLOW}⚠️ Failed to push to Edge_Node. Check Tailscale connectivity.${NC}"
     fi
 else
-    echo -e "${YELLOW}⚠️ Remote 'edge_node' not configured.${NC}"
+    echo -e "${YELLOW}⚠️ Remote 'Edge_Node' not configured.${NC}"
 fi
 
 # 2. Sync to Sovereign Gitea (Local GPU Server)

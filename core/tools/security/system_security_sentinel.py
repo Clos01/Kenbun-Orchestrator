@@ -1,7 +1,7 @@
 """
 System Security Sentinel.
 Provides deterministic host security auditing, agent permission boundaries,
-network exposure analysis, and automated permission hardening for the ComputeNode node.
+network exposure analysis, and automated permission hardening for the Edge_Node node.
 """
 import os
 import re
@@ -41,7 +41,7 @@ class SystemSecuritySentinel:
         r"(?i)\bfdisk\b",
         r"(?i)\bdd\s+if=/dev/(zero|urandom)\s+of=/dev/",
         r":\(\)\s*\{\s*:\|:&\s*\};:",
-        r"(?i)\bchmod\s+(-R\s+)?(777|666)\s+/(?!home/<USER>/Dev)",
+        r"(?i)\bchmod\s+(-R\s+)?(777|666)\s+/(?!home/user/Dev)",
         r"(?i)\bchown\s+(-R\s+)?root\b",
         r"(?i)\b(curl|wget)\b.*\|\s*(bash|sh)\b",
         r"(?i)\bcat\s+~?/\.ssh/id_[a-zA-Z0-9_-]+\b.*\b(curl|nc|ncat|netcat|wget)\b",
@@ -274,7 +274,7 @@ class SystemSecuritySentinel:
 @sovereign_tool()
 def audit_system_security() -> str:
     """
-    Audits the host machine (ComputeNode) for credential exposure, loose file permissions,
+    Audits the host machine (Edge_Node) for credential exposure, loose file permissions,
     and open network socket vulnerabilities.
     """
     sentinel = SystemSecuritySentinel()

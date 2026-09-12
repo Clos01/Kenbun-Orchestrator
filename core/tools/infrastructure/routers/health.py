@@ -20,7 +20,7 @@ async def health_check():
 
 @router.get("/api/v1/system/storage")
 async def get_storage_telemetry():
-    """Retrieves disk storage usage across local node and compute_node server."""
+    """Retrieves disk storage usage across local node and Edge_Node server."""
     from tools.infrastructure.storage_monitor import get_storage_stats
     return get_storage_stats()
 

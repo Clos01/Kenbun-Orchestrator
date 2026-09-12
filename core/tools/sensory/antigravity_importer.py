@@ -25,7 +25,7 @@ rebuildable cache — losing it just means re-running a full sync.
 Typical pipeline (from the Mac):
 
     python3 core/tools/sensory/antigravity_importer.py extract \
-      | ssh <REMOTE_NODE> docker exec -i portable_fastmcp \
+      | ssh gpu_node docker exec -i portable_fastmcp \
           python3 /app/core/tools/sensory/antigravity_importer.py apply
 
 Format risk: transcript.jsonl is not a documented Google format. Unknown or

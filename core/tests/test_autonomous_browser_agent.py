@@ -35,7 +35,7 @@ class TestAutonomousBrowserAgent(unittest.TestCase):
             self.assertIn("duration_seconds", res)
 
     def test_hybrid_auto_escalation_on_bot_block(self):
-        """Verify hybrid mode automatically escalates to ComputeNode UI-TARS when bot-blocked."""
+        """Verify hybrid mode automatically escalates to Edge_Node UI-TARS when bot-blocked."""
         blocked_pw = {
             "status": "BOT_BLOCKED",
             "engine_used": "playwright",
@@ -45,19 +45,19 @@ class TestAutonomousBrowserAgent(unittest.TestCase):
 
         tars_success = {
             "status": "SUCCESS",
-            "engine_used": "ui_tars_compute_node",
+            "engine_used": "ui_tars_p330",
             "execution_trace": [{"step": 1, "action": "click", "coords": [500, 300]}]
         }
 
         with patch.object(self.agent, "execute_playwright", return_value=blocked_pw):
-            with patch.object(self.agent, "execute_compute_node_ssh_tars", return_value=tars_success):
+            with patch.object(self.agent, "execute_p330_ssh_tars", return_value=tars_success):
                 res = self.agent.execute_hybrid(
                     url="https://enterpriseapp.ai",
                     goal="Bypass blocker and open dashboard",
                     session_id="hybrid_sess"
                 )
                 self.assertEqual(res["status"], "SUCCESS")
-                self.assertEqual(res["engine_used"], "ui_tars_compute_node")
+                self.assertEqual(res["engine_used"], "ui_tars_p330")
                 self.assertTrue(res.get("hybrid_escalated"))
                 self.assertIn("playwright_attempt", res)
 

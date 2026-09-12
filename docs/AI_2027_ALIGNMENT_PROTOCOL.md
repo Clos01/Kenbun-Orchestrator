@@ -33,7 +33,7 @@ The **AI 2027** scenario report—authored by former OpenAI governance researche
 Classical AI safety theory makes a flawed assumption: **that the human operator always has complete, well-defined specifications and omniscience.**
 
 In actual software architecture, engineering, and real-world execution:
-> **The human operator (the Human Operator) does not always know all technical nuances, downstream consequences, or exact requirements in advance.**
+> **The human operator (user) does not always know all technical nuances, downstream consequences, or exact requirements in advance.**
 
 When the operator says *"I don't know"* or gives an underspecified instruction, conventional AI systems fail catastrophically in two distinct ways:
 
@@ -44,7 +44,7 @@ When the operator says *"I don't know"* or gives an underspecified instruction, 
 
 ## 3. The 4 Kenbun Alignment Sentinels
 
-To remain fundamentally aligned with the Human Operator, Kenbun adheres to four non-negotiable architectural sentinels:
+To remain fundamentally aligned with user, Kenbun adheres to four non-negotiable architectural sentinels:
 
 ### Sentinel 1: Epistemic Humility (Zero False Certainty)
 * When instructions are underspecified, ambiguous, or when the operator explicitly says *"I don't know"*, Kenbun **never guesses or acts on silent assumptions**.
@@ -56,7 +56,7 @@ To remain fundamentally aligned with the Human Operator, Kenbun adheres to four 
 ### Sentinel 2: Two-Zone Action Boundary (Green vs. Yellow/Red)
 * **Green Zone (Full Autonomy Allowed):**
   * Read-only operations, AST parsing, lint checks, vector memory searches, local benchmarks, and sandboxed test executions.
-  * Can run freely 24/7 in background loops (e.g. `kenbun-nightwatch` on the ComputeNode).
+  * Can run freely 24/7 in background loops (e.g. `kenbun-nightwatch` on the Edge_Node).
 * **Yellow / Red Zone (Strict Confirmation Gates):**
   * Database migrations, dropping tables, file deletions, Git pushes to `main`, and financial/API billing actions.
   * **Strictly halts** and presents the exact proposed diff and impact before execution.
@@ -86,8 +86,8 @@ Kenbun's answer is **Local-First Physical Hardware Sovereignty**:
 | Machine | Role in Sovereign Swarm | Strategic Function |
 | :--- | :--- | :--- |
 | **MacBook Pro** | Command Center & Operator Node | Strategic ideation, code authoring, and human confirmation gating. |
-| **Low-Wattage Edge Node** | 24/7 Nightwatch Satellite | Low-wattage continuous autonomy, permit scrapers, and background audits. |
+| **ThinkStation Edge_Node** | 24/7 Nightwatch Satellite | Low-wattage continuous autonomy, permit scrapers, and background audits. |
 | **Local GPU Server (e.g., 16GB VRAM)** | Heavy Compute Engine | Local LM Studio models (Qwen 2.5 Coder 14B), ChromaDB vectors, and PostgreSQL memory. |
-| **Network Shield Node** | Mesh & Network Shield | Local DNS Sinkhole DNS guard and local network sentry. |
+| **Network Shield Node** | Mesh & Network Shield | Pi-hole v6 DNS guard and local network sentry. |
 
 By keeping all vector memory, business rules, and evaluations anchored to your private VPN mesh, **Kenbun remains completely independent of cloud monopoly lock-in while preserving 100% human alignment.**

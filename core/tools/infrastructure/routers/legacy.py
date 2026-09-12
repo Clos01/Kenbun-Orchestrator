@@ -157,28 +157,28 @@ def check_local_supervisor() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Helper: ComputeNode Worker health check (cached 15 s)
+# Helper: Edge_Node Worker health check (cached 15 s)
 # ---------------------------------------------------------------------------
 
-_last_compute_node_check_time = 0.0
-_cached_compute_node_status = None
+_last_p330_check_time = 0.0
+_cached_p330_status = None
 
 
-async def check_compute_node_status() -> dict:
-    global _last_compute_node_check_time, _cached_compute_node_status
+async def check_p330_status() -> dict:
+    global _last_p330_check_time, _cached_p330_status
     current_time = time.time()
     # Cache for 15 seconds to prevent event loop lag and blockages
-    if _cached_compute_node_status is not None and (current_time - _last_compute_node_check_time) < 15.0:
-        return _cached_compute_node_status
+    if _cached_p330_status is not None and (current_time - _last_p330_check_time) < 15.0:
+        return _cached_p330_status
 
     try:
-        from tools.execution.compute_node_worker import compute_node_worker
-        status = await asyncio.to_thread(compute_node_worker.ping)
+        from tools.execution.p330_worker import p330_worker
+        status = await asyncio.to_thread(p330_worker.ping)
     except Exception as e:
         status = {"status": "error", "error": str(e)}
 
-    _cached_compute_node_status = status
-    _last_compute_node_check_time = current_time
+    _cached_p330_status = status
+    _last_p330_check_time = current_time
     return status
 
 
@@ -356,7 +356,7 @@ async def get_stats():
                 "node": "System-3"
             },
             "lm_studio": await asyncio.to_thread(check_local_supervisor),
-            "compute_node": await check_compute_node_status()
+            "Edge_Node": await check_p330_status()
         },
         "history_trend": history_trend
     }

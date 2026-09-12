@@ -35,14 +35,14 @@ KNOWLEDGE_BASE = {
         ],
         "freeze_point": "If someone asks: 'How does the map know what cities are available?'\nAnswer: 'The map never guesses or hardcodes cities. It queries the database for which towns have leads right now, and builds the dropdown dynamically.'"
     },
-    "edge_node": {
-        "title": "ThinkStation edge_node Tiny Server (The Local Brain)",
+    "Edge_Node": {
+        "title": "Edge Compute Node (The Local Brain)",
         "metaphor": "Think of it as our private high-performance utility closet. Instead of paying Amazon or Google $150 every month to rent a computer in the cloud, we have a whisper-quiet, ultra-fast mini-PC running 24/7 in our home that handles all our heavy databases, scrapers, and background jobs for pennies of electricity.",
         "box1": "Our Local Network / Tailscale Mesh (Secure private tunnel from any laptop/phone)",
         "box2": "Docker Containers (Independent mini-computers running our database, scrapers, and APIs)",
         "box3": "Persistent SSD Storage (All our leads, transcripts, and AI memories stay 100% private and owned by us)",
         "elevator": [
-            "The edge_node is our private, dedicated on-premise micro-server running 24/7.",
+            "The Edge_Node is our private, dedicated on-premise micro-server running 24/7.",
             "It runs Docker containers that handle all our heavy scrapers and databases without cloud hosting bills.",
             "We connect to it securely through our private encrypted mesh, so it works anywhere in the world."
         ],
@@ -176,7 +176,7 @@ def print_explanation(data):
 def main():
     if len(sys.argv) < 2:
         print(f"{BOLD}Usage:{RESET}")
-        print("  bin/kenbun-explain <keyword>     (e.g., flooring, edge_node, dynamic, hivemind)")
+        print("  bin/kenbun-explain <keyword>     (e.g., flooring, Edge_Node, dynamic, hivemind)")
         print("  bin/kenbun-explain <filepath>    (e.g., bin/kenbun-explain src/components/DashboardBody.tsx)")
         print("\nAvailable concepts: " + ", ".join(KNOWLEDGE_BASE.keys()))
         sys.exit(0)

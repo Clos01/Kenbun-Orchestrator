@@ -1,7 +1,7 @@
 """
 Storage & Resource Monitor for Kenbun Swarm
 ===========================================
-Provides disk usage stats for compute_node and Legion nodes,
+Provides disk usage stats for Edge_Node and Legion nodes,
 and performs automated cleanup of temporary logs and old n8n execution files.
 """
 
@@ -10,7 +10,7 @@ import subprocess
 from typing import Dict, Any
 
 def get_storage_stats() -> Dict[str, Any]:
-    """Returns disk usage for local system and compute_node via SSH if reachable."""
+    """Returns disk usage for local system and Edge_Node via SSH if reachable."""
     total, used, free = shutil.disk_usage("/")
     stats = {
         "local": {
@@ -21,10 +21,10 @@ def get_storage_stats() -> Dict[str, Any]:
         }
     }
 
-    # Try fetching compute_node disk usage
+    # Try fetching Edge_Node disk usage
     try:
         res = subprocess.run(
-            ["ssh", "-o", "ConnectTimeout=3", "compute_node", "df -h / | tail -n 1"],
+            ["ssh", "-o", "ConnectTimeout=3", "Edge_Node", "df -h / | tail -n 1"],
             capture_output=True,
             text=True,
             timeout=5
@@ -32,21 +32,21 @@ def get_storage_stats() -> Dict[str, Any]:
         if res.returncode == 0:
             parts = res.stdout.split()
             if len(parts) >= 5:
-                stats["compute_node"] = {
+                stats["Edge_Node"] = {
                     "total": parts[1],
                     "used": parts[2],
                     "free": parts[3],
                     "percent_used": parts[4]
                 }
     except Exception:
-        stats["compute_node"] = {"error": "Unreachable"}
+        stats["Edge_Node"] = {"error": "Unreachable"}
 
     return stats
 
 def cleanup_n8n_logs() -> Dict[str, Any]:
-    """Purges expired n8n execution logs and temporary docker files on compute_node."""
+    """Purges expired n8n execution logs and temporary docker files on Edge_Node."""
     try:
-        cmd = "ssh compute_node 'docker exec n8n-docker-n8n-1 n8n cleanup --days 14 || true'"
+        cmd = "ssh Edge_Node 'docker exec n8n-docker-n8n-1 n8n cleanup --days 14 || true'"
         res = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=15)
         return {"status": "success", "output": res.stdout.strip()}
     except Exception as e:

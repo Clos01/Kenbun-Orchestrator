@@ -725,7 +725,7 @@ async def run_pipeline(
         state["memory_result"] = past_lessons
 
     # --- RECALL (Honcho reasoned representation) ---
-    # Pull the deriver's learned facts about BOTH the system and the user (the Human Operator)
+    # Pull the deriver's learned facts about BOTH the system and the user (user)
     # into the pipeline context so every workflow benefits from what Honcho has
     # adapted over time — not just the architect/design/supervisor agents.
     try:

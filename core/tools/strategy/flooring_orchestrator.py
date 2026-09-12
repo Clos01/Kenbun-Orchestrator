@@ -45,7 +45,7 @@ SAMPLE_PERMIT_BATCH: List[Dict[str, Any]] = [
         "description": "New custom luxury residential construction, 2-story with finished basement, open floor plan, framing stage",
         "phone": "919-555-0144",
         "city": "Cary",
-        "county": "Metro County",
+        "county": "Wake",
         "issue_date": "2026-08-14"
     },
     {
@@ -57,7 +57,7 @@ SAMPLE_PERMIT_BATCH: List[Dict[str, Any]] = [
         "description": "Commercial tenant upfit for new boutique dental clinic and medical consultation suites, self-leveling required",
         "phone": "919-555-0288",
         "city": "Raleigh",
-        "county": "Metro County",
+        "county": "Wake",
         "issue_date": "2026-08-22"
     },
     {
@@ -69,7 +69,7 @@ SAMPLE_PERMIT_BATCH: List[Dict[str, Any]] = [
         "description": "High-end bespoke interior architecture remodel, custom French oak specification, luxury bathroom and kitchen expansion",
         "phone": "",  # Unlisted phone test case
         "city": "Wake Forest",
-        "county": "Metro County",
+        "county": "Wake",
         "issue_date": "2026-08-30"
     },
     {
@@ -81,7 +81,7 @@ SAMPLE_PERMIT_BATCH: List[Dict[str, Any]] = [
         "description": "Turnkey rehab and flip of 1960s ranch, structural repair and full interior cosmetic renovation for quick resale",
         "phone": "919-555-0812",
         "city": "Raleigh",
-        "county": "Metro County",
+        "county": "Wake",
         "issue_date": "2026-09-02"
     }
 ]
