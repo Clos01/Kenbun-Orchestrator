@@ -1,0 +1,1336 @@
+"""
+The Orchestrator — Meta-tool that chains all Pro Stack tools into intelligent workflows.
+
+Instead of manually calling 7 tools in sequence, the AI calls ONE tool:
+    orchestrate("bug_fix", task="Fix the auth bypass", file_path="src/login.py")
+
+The orchestrator runs the full pipeline and returns a structured report.
+
+Architecture: State-machine engine with 3 built-in pipelines.
+Designed in collaboration with Gemini 2.0 Flash.
+"""
+import asyncio
+import json
+import urllib.request
+import time
+import uuid
+from pathlib import Path
+
+# Upper bound on any single step full output appended to the report.
+MAX_FULL_OUTPUT_CHARS = 24000
+
+
+# Import centralized settings
+from tools.infrastructure.config import settings
+
+from tools.strategy.strategy_manager import governor
+from tools.strategy.token_governor import token_governor
+from tools.utils.notifications import send_notification
+from tools.audit.reflection_agent import reflect_and_distill as _reflect_and_distill
+from tools.utils.sync_intelligence import run_sync
+from tools.strategy.decision_logic import router
+from tools.autonomic.autonomic_corrector import corrector
+from tools.audit.mars_auditor import mars_auditor
+from tools.infrastructure.parallel_manager import parallel_manager
+from hivemind_memory.hive_memory import hive_memory
+from tools.utils.maze_protocol import backward_verify
+from tools.infrastructure.pipelines.bug_fix import build_bug_fix_pipeline
+from tools.infrastructure.pipelines.code_review import build_code_review_pipeline
+from tools.infrastructure.pipelines.research import build_research_pipeline
+from tools.infrastructure.pipelines.shadow_test import build_shadow_test_pipeline
+from tools.infrastructure.pipelines.design_ui import build_design_ui_pipeline
+from tools.infrastructure.pipelines.wireframe import build_wireframe_pipeline
+from tools.infrastructure.pipelines.self_improve import build_self_improve_pipeline
+from tools.infrastructure.pipelines.sdlc_loop import build_sdlc_loop_pipeline
+from tools.infrastructure.pipelines.git_push_integration import build_git_push_integration_pipeline
+from tools.infrastructure.pipelines.vcs_qa import build_vcs_qa_pipeline
+from tools.infrastructure.pipelines.fable_reasoning import build_fable_reasoning_pipeline
+from tools.infrastructure.pipelines.flooring_target import build_flooring_target_pipeline
+from tools.infrastructure.pipelines.system_security import build_system_security_pipeline
+from tools.infrastructure.pipelines.predictive_timesfm import build_predictive_timesfm_pipeline
+from tools.infrastructure.pipelines.agent_skill_evolution import build_agent_skill_evolution_pipeline
+from tools.utils.orchestrator_helpers import _prune_log
+from tools.utils.telemetry import log_tool_performance
+
+# --- 2. GHOST UTILS (Prevent Crashes) ---
+import fcntl
+import threading
+
+TELEMETRY_PATH = settings.BRAIN_HEALTH_DIR / "live_telemetry.json"
+_telemetry_lock = threading.RLock()
+
+def log_to_dashboard(message: str):
+    """Sends a message to the UI dashboard by writing to live_telemetry.json."""
+    print(f"🖥️ [SWARM] {message}")
+    with _telemetry_lock:
+        try:
+            data = {"timestamp": time.time(), "message": message, "type": "log"}
+            with open(TELEMETRY_PATH, "a") as f:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    f.write(json.dumps(data) + "\n")
+                finally:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except (IOError, OSError, json.JSONDecodeError) as e:
+            print(f"⚠️ Dashboard log failed: {e}")
+
+async def check_connectivity(ip: str) -> bool:
+    """Checks if the Remote PC is reachable via non-blocking ping."""
+    import platform
+    try:
+        system = platform.system().lower()
+        if "windows" in system:
+            cmd = ["ping", "-n", "1", "-w", "1000", ip]
+        else:
+            # -c 1 (1 count), -W 1 (1s timeout on Linux), -t 1 (1s timeout on macOS)
+            timeout_flag = "-t" if "darwin" in system else "-W"
+            cmd = ["ping", "-c", "1", timeout_flag, "1", ip]
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        await asyncio.wait_for(proc.communicate(), timeout=1.5)
+        return proc.returncode == 0
+    except (asyncio.TimeoutError, Exception):
+        return False
+
+def save_topology(tasks_ref: list, data: dict):
+    """Updates the real-time swarm topology for the frontend."""
+    if tasks_ref is None:
+        tasks_ref = []
+
+    tasks_ref.append(data)
+
+    with _telemetry_lock:
+        try:
+            topology_data = {"timestamp": time.time(), "topology": tasks_ref, "type": "topology"}
+            with open(TELEMETRY_PATH, "a") as f:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    f.write(json.dumps(topology_data) + "\n")
+                finally:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except (IOError, OSError, json.JSONDecodeError) as e:
+            print(f"⚠️ Topology save failed: {e}")
+
+
+# ============================================================
+# PIPELINE DEFINITIONS
+# ============================================================
+
+
+# ============================================================
+# PIPELINE REGISTRY
+# ============================================================
+
+from tools.registry import registry, PipelineEntry
+
+# ============================================================
+# PIPELINE REGISTRY INITIALIZATION
+# ============================================================
+
+registry.register_pipeline(PipelineEntry(
+    name="bug_fix",
+    builder=build_bug_fix_pipeline,
+    description="Fix a bug: scan → recall → checkpoint → analyze → test → remember",
+))
+registry.register_pipeline(PipelineEntry(
+    name="code_review",
+    builder=build_code_review_pipeline,
+    description="Review code: scan → Gemini review → docs → supervisor → consensus",
+))
+registry.register_pipeline(PipelineEntry(
+    name="research_implement",
+    builder=build_research_pipeline,
+    description="Research & build: Gemini research → scan → checkpoint → supervisor",
+))
+registry.register_pipeline(PipelineEntry(
+    name="shadow_test",
+    builder=build_shadow_test_pipeline,
+    description="Background testing: read → analyze → draft → supervisor → sandbox",
+))
+registry.register_pipeline(PipelineEntry(
+    name="wireframe",
+    builder=build_wireframe_pipeline,
+    description="Accurate wireframe: LLM designs structure/layout intent → deterministic layout → schema+geometry validation → LLM accuracy critique → repair loop → push to that project's canvas",
+))
+registry.register_pipeline(PipelineEntry(
+    name="design_ui",
+    builder=build_design_ui_pipeline,
+    description="Strategic UI Design: discovery → research → artifact generation → 5D audit",
+))
+registry.register_pipeline(PipelineEntry(
+    name="agent_self_improve",
+    builder=build_self_improve_pipeline,
+    description="Strategic Agent Self-Improvement: hardware detection → evaluation → prompt optimization",
+))
+registry.register_pipeline(PipelineEntry(
+    name="sdlc_loop",
+    builder=build_sdlc_loop_pipeline,
+    description="SDLC Multi-Agent Integration Pipeline (Jira & Bitbucket)",
+))
+registry.register_pipeline(PipelineEntry(
+    name="git_push_integration",
+    builder=build_git_push_integration_pipeline,
+    description="Git Push Integration Pipeline: watch → analyze → checkpoint → apply → sandbox → supervisor",
+))
+registry.register_pipeline(PipelineEntry(
+    name="vcs_qa",
+    builder=build_vcs_qa_pipeline,
+    description="VCS & QA Sentinel: Ingest diff → static audit → architecture check → auto-repair → structured commit generation",
+))
+registry.register_pipeline(PipelineEntry(
+    name="fable_reasoning",
+    builder=build_fable_reasoning_pipeline,
+    description="Sovereign Fable-Class Reasoning: objective done-state → Tier 3 anti-patterns → GoT dialectic branching → predictive failure modeling → System 2 consensus",
+))
+registry.register_pipeline(PipelineEntry(
+    name="flooring_target",
+    builder=build_flooring_target_pipeline,
+    description="Flooring Lead Targeting & 8-Phase Board Provisioning across the 4 B2B contractor archetypes",
+))
+registry.register_pipeline(PipelineEntry(
+    name="system_security",
+    builder=build_system_security_pipeline,
+    description="System Security & Build Protection: Host audit → build context sanitization → permission verification → auto-hardening → supervisor sign-off",
+))
+registry.register_pipeline(PipelineEntry(
+    name="predictive_timesfm",
+    builder=build_predictive_timesfm_pipeline,
+    description="Google TimesFM-3 Predictive Pipeline: sequential trajectory forecast → risk hazard analysis → dynamic pipeline synthesis → Bayesian momentum sync",
+))
+registry.register_pipeline(PipelineEntry(
+    name="agent_skill_evolution",
+    builder=build_agent_skill_evolution_pipeline,
+    description="Autonomous Agent & Skill Evolution: Gap discovery → synthesis → sandbox verification → registry promotion → supervisor consensus",
+))
+
+# Workflows whose Gemini-heavy pipelines routinely exceed a synchronous client's
+# request timeout. The MCP tool (server.py) uses this set to decide which workflows
+# should return an immediate Job ID instead of running inline.
+HEAVY_WORKFLOWS = {"wireframe", "design_ui", "research_implement", "code_review", "shadow_test", "bug_fix", "agent_self_improve", "sdlc_loop", "git_push_integration", "fable_reasoning", "predictive_timesfm"}
+
+
+def _telemetry_id(step_id: str) -> str:
+    """Return the tool_id to record telemetry under: the real tool name when the
+    step maps to a registered tool, otherwise a step:-namespaced stage id so
+    non-tool pipeline stages don't inflate the tool registry/dashboard count."""
+    try:
+        from tools.utils.bayesian import is_valid_tool_id, STEP_PREFIX
+        return step_id if is_valid_tool_id(step_id) else f"{STEP_PREFIX}{step_id}"
+    except Exception:
+        return step_id
+
+
+# ============================================================
+# ANALYSIS LOGIC (Bug Diagnostics & Patching)
+# ============================================================
+
+# NOTE: a shorter, older `_analyze_bug` lived here and was shadowed by the
+# definition further down this file, so it never ran. It also referenced
+# `_local_view_file`, which only ever existed as a nested local inside
+# orchestrate()/swarm() — reaching it would have raised NameError. Removed;
+# the surviving definition is the one that was already in use.
+
+
+def build_pipeline_tools(project_path: str = "."):
+    """The canonical name -> callable map that pipeline builders index.
+
+    This dynamically registers and resolves all harvested tools from the central
+    registry, avoiding hardcoded drift and giving the pipelines / swarm full
+    access to the sovereign toolset.
+
+    project_path scopes view_file's jail to the repo under work.
+    """
+    import os
+    from tools.harvester import harvest_and_register_tools
+    harvest_and_register_tools()
+
+    from tools.registry import registry
+
+    # 1. Dynamically load all registered tools with env verification
+    tools_dict = {}
+    for name, tool_entry in registry.get_all_tools().items():
+        missing_env = [env for env in tool_entry.requires_env if env not in os.environ]
+        if missing_env:
+            # Skip tool if required environment variables are missing (Senior Version)
+            continue
+        tools_dict[name] = tool_entry.handler
+
+    # 2. Local Helper wrappers
+    def _local_view_file(AbsolutePath: str) -> str:
+        path = Path(AbsolutePath).resolve()
+        root = Path(project_path).resolve()
+        if not root.is_absolute():
+            root = Path(settings.PROJECT_ROOT).resolve()
+        if not path.is_relative_to(root):
+            raise PermissionError(f"Security Breach Blocked: Path '{path}' is outside project root '{root}'.")
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            return f.read()
+
+    # Override/inject local wrappers
+    tools_dict["view_file"] = _local_view_file
+    tools_dict["analyze_bug"] = _analyze_bug
+    tools_dict["reflect_and_distill"] = _reflect_and_distill
+
+    # Custom renames / compatibility mappings
+    from tools.audit.consult_architect import consult_brain
+    tools_dict["consult_hivemind"] = consult_brain
+
+    # Ensure self_improve daemon tools are registered
+    from tools.memory.hardware_bridge import hardware_bridge
+    from services.self_improvement_daemon import run_self_improvement_cycle
+    tools_dict["detect_hardware"] = hardware_bridge.detect_capabilities
+    tools_dict["run_self_improvement_cycle"] = run_self_improvement_cycle
+
+    return tools_dict
+
+
+# NOTE: an earlier `orchestrate` definition lived here. It was dead code — a
+# second definition further down this file silently shadowed it at import time,
+# so Python only ever bound the later one. The dead copy was the better
+# implementation (it used build_pipeline_tools and handled being called from
+# inside a running event loop) while the live one built a smaller tool dict and
+# called asyncio.run directly. Both halves are now merged into the single
+# definition below; keeping two was how they drifted apart unnoticed.
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+
+def extract_json_array(text: str) -> str:
+    """Robustly extracts the first JSON array found in text using a stack-based matcher."""
+    if not text:
+        return None
+    start_idx = text.find('[')
+    if start_idx == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+
+    for i in range(start_idx, len(text)):
+        char = text[i]
+
+        if escape:
+            escape = False
+            continue
+
+        if char == '\\':
+            escape = True
+            continue
+
+        if char == '"':
+            in_string = not in_string
+            continue
+
+        if not in_string:
+            if char == '[':
+                depth += 1
+            elif char == ']':
+                depth -= 1
+                if depth == 0:
+                    return text[start_idx:i+1]
+
+    return None
+
+
+async def spawn_swarm(objective: str, tools: dict, project_path: str = "") -> str:
+    """
+    High-level swarm engine.
+    1. Queen decomposes objective into tasks.
+    2. Bayesian Governor assigns workers.
+    3. Workers execute and report back.
+    """
+    print(f"🐝 Swarm Objective: {objective}")
+
+    # --- 0. PROJECT MANDATES ---
+    mandates = ""
+    rules_path = Path(project_path) / ".kenbun_rules.md"
+    if rules_path.exists():
+        with open(rules_path, "r") as f:
+            mandates = f.read()
+        print("📜 Found project mandates in .kenbun_rules.md")
+
+    # --- 1. INTEGRITY GATING (HME Router) ---
+    from tools.strategy.hme_router import hme_router
+    route_info = hme_router.route_task(objective)
+    integrity_instruction = ""
+    if route_info.get("integrity_flag") == "CHUNKING_REQUIRED":
+        print(f"⚖️ HME Integrity: High volume detected ({route_info.get('estimated_volume')}). Forcing chunked decomposition.")
+        integrity_instruction = "IMPORTANT: This objective is MASSIVE. You MUST decompose it into small, atomic chunks (max 100 lines per task) to prevent LLM truncation. Do NOT combine multiple features into one task."
+
+    # --- 2. DECOMPOSITION (The Queen) ---
+    queen_prompt = (
+        f"OBJECTIVE: {objective}\n\n"
+        f"PROJECT MANDATES:\n{mandates}\n\n"
+        f"{integrity_instruction}\n"
+        "As the Kenbun Queen, decompose this objective into a JSON list of atomic tasks. "
+        "Strictly follow the PROJECT MANDATES if provided. "
+        "Each task must have: 'id', 'label', 'worker_type' (coder, auditor, designer), and 'task_description'. "
+        "OPTIMIZATION: Group parallelizable tasks (research, audits, scans) together at the start or between blocking steps to maximize swarm efficiency. "
+        "Format as valid JSON: [{{'id': '...', 'label': '...', 'worker_type': '...', 'task_description': '...'}}]"
+    )
+
+    try:
+        # DSH-06: high-reasoning decomposition is no longer a single point of
+        # failure. The Resolver tries gemini -> deepseek -> local LLM gateway;
+        # Gemini stays first so the happy path is unchanged, but a 429 / quota
+        # exhaustion now demotes it and the next provider serves the swarm.
+        from tools.strategy.decomposition import run_decomposition, ResolverExhausted
+        try:
+            # run_decomposition logs which provider served (and warns on failover);
+            # the returned name is available here if a caller ever needs to branch.
+            _served_by, raw_decomposition = run_decomposition(
+                queen_prompt,
+                is_usable=lambda t: bool(extract_json_array(t)),
+            )
+        except ResolverExhausted:
+            # per-provider failure detail is already logged by the Resolver;
+            # keep the user-facing string generic (no raw exception text).
+            return ("❌ Swarm decomposition failed: every reasoning provider is currently "
+                    "unavailable. Check API quotas / provider health, then retry.")
+
+        # Simple extraction of JSON from markdown if needed
+        json_str = extract_json_array(raw_decomposition)
+        if not json_str:
+            return f"❌ Swarm decomposition format error. No JSON array found in raw output: {raw_decomposition}"
+
+        tasks = json.loads(json_str)
+        if not isinstance(tasks, list):
+            raise ValueError(f"Swarm decomposition error. Parsed JSON is not a list: {raw_decomposition}")
+
+        # Initialize tasks with pending status for the Flowchart
+        for i, t in enumerate(tasks):
+            t["id"] = f"task-{i}"
+            t["status"] = "pending"
+
+            # --- MARS BOUNDARY INJECTION ---
+            category = "bug_fix"
+            if "ui" in t["label"].lower() or "designer" in t["worker_type"].lower(): category = "ui"
+            if "security" in t["label"].lower(): category = "security"
+            if "architecture" in t["label"].lower(): category = "architecture"
+
+            mars_guidance = mars_auditor.get_guidance(category)
+            if mars_guidance:
+                t["task_description"] = f"{t['task_description']}\n\n{mars_guidance}"
+
+    except (json.JSONDecodeError, ValueError, Exception) as e:
+        return f"❌ Swarm decomposition failed: {e}"
+
+    report = [
+        f"# 🐝 Swarm Objective: {objective}",
+        f"**Tasks identified:** {len(tasks)}",
+        ""
+    ]
+
+    # --- 2. EXECUTION ---
+    print(f"📋 TASKS IDENTIFIED: {[t.get('label') for t in tasks]}")
+    task_groups = parallel_manager.decompose_parallel_groups(tasks)
+
+    for group in task_groups:
+        if len(group) > 1:
+            print(f"⚡ EXECUTING PARALLEL BATCH: {len(group)} tasks")
+            async_tasks = []
+            for t_meta in group:
+                t_meta["status"] = "active"
+                t_meta["worker_type"]
+                t_meta["label"]
+                desc = t_meta["task_description"]
+
+                # Determine workflow
+                workflow_path = router.get_strategy_path(desc)
+                workflow_map = {
+                    "SECURITY_HARDENING_PATH": "code_review",
+                    "UI_COMPONENT_BUILD": "research_implement",
+                    "STANDARD_BUG_FIX": "bug_fix",
+                    "ARCHITECT_RESEARCH_PATH": "research_implement",
+                    "UI_FIX_PATH": "bug_fix",
+                    "STANDARD_EXECUTION": "bug_fix"
+                }
+                wf = workflow_map.get(workflow_path, "bug_fix")
+
+                async_tasks.append(
+                    parallel_manager.run_task(
+                        run_pipeline,
+                        workflow=wf,
+                        task=desc,
+                        tools=tools,
+                        project_path=project_path,
+                        tasks_ref=tasks,
+                        task_index=tasks.index(t_meta)
+                    )
+                )
+
+            group_results = await asyncio.gather(*async_tasks)
+            for res, t_meta in zip(group_results, group):
+                t_meta["status"] = "completed"
+                report.append(res)
+        else:
+            # Sequential / Blocking task
+            task_meta = group[0]
+            task_meta["status"] = "active"
+            task_meta["label"]
+            desc = task_meta["task_description"]
+
+            workflow_path = router.get_strategy_path(desc)
+            workflow_map = {
+                "SECURITY_HARDENING_PATH": "code_review",
+                "UI_COMPONENT_BUILD": "research_implement",
+                "STANDARD_BUG_FIX": "bug_fix",
+                "ARCHITECT_RESEARCH_PATH": "research_implement",
+                "UI_FIX_PATH": "bug_fix",
+                "STANDARD_EXECUTION": "bug_fix"
+            }
+            workflow = workflow_map.get(workflow_path, "bug_fix")
+
+            task_result = await run_pipeline(
+                workflow=workflow,
+                task=desc,
+                tools=tools,
+                project_path=project_path,
+                tasks_ref=tasks,
+                task_index=tasks.index(task_meta)
+            )
+            task_meta["status"] = "completed"
+            report.append(task_result)
+
+    summary = f"Swarm completed {len(tasks)} tasks."
+    send_notification("Kenbun Swarm", summary)
+
+    # Trigger background sync to remote PC
+    print("📡 Swarm complete. Triggering intelligence sync...")
+    run_sync()
+
+    return "\n\n".join(report)
+
+
+# ============================================================
+# STATE MACHINE ENGINE
+# ============================================================
+
+MAX_STEPS = 20  # Safety: prevent infinite loops
+TOOL_TIMEOUT = settings.BASE_TIMEOUT  # Safety: baseline timeout per step
+
+# Steps that call external AI APIs get their own dedicated timeout
+# so their latency doesn't blow the shared watchdog for other steps
+GEMINI_STEPS = {"gemini_review", "gemini_research", "research_with_gemini", "research"}
+
+async def _get_active_brain() -> str:
+    """Detects where the "Brain" is currently located based on active configuration."""
+    primary_url = settings.PRIMARY_LLM_URL
+    fallback_url = settings.FALLBACK_LLM_URL
+
+    # Check primary
+    try:
+        url = f"{primary_url}/models"
+        with urllib.request.urlopen(url, timeout=0.5):
+            return f"🧠 [PRIMARY-GATEWAY] ({settings.PRIMARY_LLM_MODEL})"
+    except (urllib.error.URLError, Exception):
+        pass
+
+    # Check fallback
+    try:
+        url = f"{fallback_url}/models"
+        with urllib.request.urlopen(url, timeout=0.5):
+            return f"🧠 [FALLBACK-GATEWAY] ({settings.FALLBACK_LLM_MODEL})"
+    except (urllib.error.URLError, Exception):
+        pass
+
+    return "☁️ [CLOUD-GATEWAY] (Failover Active)"
+
+def get_timeout_multiplier() -> float:
+    """Detects the loaded model in the primary gateway and adjusts the timeout multiplier."""
+    primary_url = settings.PRIMARY_LLM_URL
+    if primary_url.endswith("/"):
+        primary_url = primary_url[:-1]
+    base_url = f"{primary_url}/models"
+    try:
+        with urllib.request.urlopen(base_url, timeout=1) as response:
+            data = json.loads(response.read().decode())
+            model_id = data["data"][0]["id"].lower()
+
+            # Logic: Larger models = Higher Latency
+            if "70b" in model_id:
+                return 4.0
+            if "32b" in model_id:
+                return 2.5
+            if "14b" in model_id:
+                return 1.5
+    except (urllib.error.URLError, Exception):
+        pass
+
+    return settings.SWARM_TIMEOUT_MULTIPLIER
+
+# Re-evaluate multiplier at runtime based on model
+# Removed static DYNAMIC_MULTIPLIER
+
+
+async def run_pipeline(
+    workflow: str,
+    task: str,
+    tools: dict,
+    project_path: str = "",
+    file_path: str = "",
+    code_snippet: str = "",
+    tech_key: str = "",
+    project_id: str = "",
+    fast: bool = False,
+    tasks_ref: list = None,
+    task_index: int = -1,
+    session_id: str = "",
+) -> str:
+    """
+    Execute a named pipeline using the state-machine engine.
+
+    Args:
+        workflow: Pipeline name ("bug_fix", "code_review", "research_implement")
+        task: Natural language task description
+        tools: Dict of tool functions keyed by name
+        project_path: Project root for scan_repo
+        file_path: Target file
+        code_snippet: Code to review/fix
+        tech_key: Tech key for doc grounding
+        fast: If True, skips optional heavy diagnostic steps
+        tasks_ref: Optional shared task list
+        task_index: Index in shared task list
+
+    Returns:
+        Formatted report of the entire pipeline execution.
+    """
+    pipeline_def = registry.get_pipeline(workflow)
+    if not pipeline_def:
+        available = "\n".join(f"  • **{k}** — {v.description}" for k, v in registry.get_all_pipelines().items())
+        return f"❌ Unknown workflow: `{workflow}`\n\nAvailable workflows:\n{available}"
+
+    # --- INITIALIZE STATE ---
+    state = {
+        "task": task,
+        "project_path": project_path,
+        "fast": fast,
+        "file_path": file_path,
+        "code_snippet": code_snippet,
+        "tech_key": tech_key,
+        # Tenancy key for pipelines that write to a per-project destination
+        # (the wireframe canvas). Not a filesystem path — see project_path.
+        "project_id": project_id,
+        "repo_map": None,
+        "past_fixes": None,
+        "research_result": None,
+        "gemini_analysis": None,
+        "review_result": None,
+        "sandbox_result": None,
+        "supervisor_result": None,
+        "checkpoint_result": None,
+        "memory_result": None,
+        "backtrack_count": 0,
+    }
+
+    # --- BUILD PIPELINE ---
+    # Pipeline builders index `tools["name"]` directly, so a caller that passes a
+    # narrower tool dict than the pipeline needs dies on a bare KeyError with no
+    # indication of which tool was missing or who should have supplied it. That is
+    # how delegate_task failed for every objective routed to a pipeline: it builds
+    # its own 10-tool dict while the pipelines between them require 20.
+    try:
+        steps = pipeline_def.builder(tools)
+    except KeyError as missing:
+        return (
+            f"❌ Pipeline `{workflow}` requires the tool {missing} but the caller "
+            f"did not supply it.\nAvailable tools: {sorted(tools.keys())}\n"
+            "This is a wiring bug in whoever built the tool dict, not a task failure."
+        )
+
+    # --- PLANKA WORKFLOW SYNC ---
+    planka_ctx = None
+    try:
+        from tools.strategy.planka_workflow import sync_pipeline_start
+        planka_ctx = sync_pipeline_start(workflow, task, steps)
+    except Exception as e:
+        print(f"⚠️ Planka workflow sync failed to start: {e}")
+
+    # --- EXECUTE (DSH-06 Turn Enclosure) ---
+    turn_id = f"turn_{uuid.uuid4().hex[:8]}"
+    terminal_status = "SUCCESS"
+    error_taxonomy = None
+    t0_turn = time.time()
+
+    if session_id:
+        try:
+            from tools.memory.session_log import SessionLog
+            SessionLog(session_id).turn_start(turn_id, f"[{workflow}] {task}")
+        except Exception:
+            pass
+
+    report = [
+        f"# 🎯 Orchestrator: `{workflow}`",
+        f"**Task:** {task}",
+        f"**Pipeline:** {pipeline_def.description}",
+        f"**Remaining Budget:** ${token_governor.get_remaining_budget():.4f}",
+        f"**Turn ID:** `{turn_id}`",
+        "",
+    ]
+    # Steps whose result was clipped for the inline log. Their full text is
+    # appended at the end, otherwise the pipeline's actual deliverable is
+    # generated, paid for, and then discarded.
+    full_outputs: list = []
+
+    # --- SAFE PRE-FLIGHT LINTER ---
+    if workflow in ["bug_fix", "code_review"] and (file_path or code_snippet):
+        try:
+            from tools.audit.safe_linter import safe_pre_flight_linter
+            report.append("## 🛡️ [PRE-FLIGHT STATIC AUDIT]")
+
+            # Phase 8: Orchestrator reads the file (bypassing filesystem logic in the linter)
+            snippet_to_lint = code_snippet
+            if file_path and not snippet_to_lint:
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        snippet_to_lint = f.read()
+                except Exception:
+                    pass
+
+            linter_res = safe_pre_flight_linter(code_snippet=snippet_to_lint)
+
+            if linter_res["status"] == "CLEAN":
+                report.append("✅ **CLEAN**: No syntax errors, ghost variables, or missing imports detected.")
+                if linter_res.get("fixed_code"):
+                    state["code_snippet"] = linter_res["fixed_code"]
+
+                # Short-circuit if the task is strictly an audit/linting task
+                if any(k in task.lower() for k in ["ghost", "unused", "missing variable", "undefined", "syntax", "audit", "linter"]):
+                    report.append("*(Task complete via static analysis. Short-circuiting LLM execution to save budget).*")
+                    return "\n\n".join(report)
+                else:
+                    report.append("*(Code passes static analysis. Proceeding to LLM for complex logical task).*")
+            elif linter_res["status"] == "ISSUES_REMAIN":
+                msg = "\n".join(linter_res["messages"][:10])
+                report.append(f"⚠️ **ISSUES REMAIN**:\n```\n{msg}\n```")
+            else:
+                report.append(f"❌ **LINTER ERROR**: {linter_res['messages'][0]}")
+        except Exception as e:
+            report.append(f"❌ **LINTER FAILURE**: {e}")
+
+    # --- RECALL (The Hivemind) ---
+    past_lessons = hive_memory.query(task, project=settings.PROJECT_NAME)
+    if past_lessons:
+        report.append("## 🧠 Hivemind Recall: Similar Past Fixes")
+        for lesson in past_lessons:
+            report.append(f"- **Project:** {lesson['project']}\n- **Lesson:** {lesson['task']}\n")
+        state["memory_result"] = past_lessons
+
+    # --- RECALL (Honcho reasoned representation) ---
+    # Pull the deriver's learned facts about BOTH the system and the user (the Human Operator)
+    # into the pipeline context so every workflow benefits from what Honcho has
+    # adapted over time — not just the architect/design/supervisor agents.
+    try:
+        from tools.memory.honcho_connect import retrieve_memory, retrieve_user_memory
+        sys_facts = retrieve_memory(task, n_results=4) or []
+        user_facts = retrieve_user_memory(task, n_results=4) or []
+        honcho_parts = []
+        if sys_facts:
+            honcho_parts.append("SYSTEM KNOWLEDGE:\n" + "\n".join(f"- {f}" for f in sys_facts))
+        if user_facts:
+            honcho_parts.append("USER (user) PREFERENCES:\n" + "\n".join(f"- {f}" for f in user_facts))
+        if honcho_parts:
+            state["honcho_context"] = "\n\n".join(honcho_parts)
+            report.append("## 🧠 Honcho Adaptive Recall")
+            if user_facts:
+                report.append("**User preferences applied:** " + "; ".join(str(f)[:80] for f in user_facts[:3]))
+    except Exception as e:
+        print(f"⚠️ Honcho recall skipped: {e}")
+
+    step_count = 0
+    consecutive_failures = 0
+    error_msg = ""
+
+    for step in steps:
+        step_count += 1
+        if step_count > MAX_STEPS:
+            terminal_status = "SAFETY_LIMIT_REACHED"
+            error_taxonomy = "SafetyLimitReached"
+            report.append(f"\n⚠️ Safety limit reached ({MAX_STEPS} steps). Stopping.")
+            break
+
+        # --- COST CHECK (System 4) ---
+        if not token_governor.can_spend(0.001):  # Minimal check
+            terminal_status = "BUDGET_EXCEEDED"
+            error_taxonomy = "BudgetExceeded"
+            report.append("\n⛔ **Budget Exceeded.** TokenGovernor has halted the swarm.")
+            break
+
+        # --- CIRCUIT BREAKER (System 2 Fallback) ---
+        if consecutive_failures >= 3:
+            terminal_status = "CIRCUIT_BREAKER_TRIPPED"
+            error_taxonomy = "CircuitBreakerTripped"
+            supervisor_feedback = ""
+            try:
+                from tools.audit.supervisor_agent import run_supervisor_audit
+                res = await run_supervisor_audit("Diagnose pipeline failure", f"Pipeline {workflow} failed 3 times. Last error: {error_msg}")
+                if res and "critique" in res:
+                    supervisor_feedback = f"\n\n**System 2 Diagnosis:** {res['critique']}"
+            except Exception as e:
+                supervisor_feedback = f"\n\n(Supervisor diagnosis failed: {e})"
+
+            report.append(f"\n⛔ **Circuit Breaker Tripped.** 3 consecutive tool failures detected. Halting pipeline.{supervisor_feedback}")
+            print("   ⛔ Circuit Breaker tripped. Halting pipeline.")
+            break
+
+        step_id = step["id"]
+        label = step["label"]
+        call_id = f"{step_id}_{step_count}_{uuid.uuid4().hex[:6]}"
+        step_status = "SUCCESS"
+
+        if session_id:
+            try:
+                from tools.memory.session_log import SessionLog
+                SessionLog(session_id).step_start(turn_id, step_id, call_id, label)
+            except Exception:
+                pass
+
+        # --- DYNAMIC EVALUATION (System 5: Reasoning) ---
+        skip_fn = step.get("skip_if")
+        if skip_fn and skip_fn(state):
+            report.append(f"⏭️ Skipped: {label} (Logic condition met)")
+            log_to_dashboard(f"STEP SKIPPED: {label}")
+            if session_id:
+                try:
+                    from tools.memory.session_log import SessionLog
+                    SessionLog(session_id).step_end(turn_id, step_id, call_id, "SKIPPED", result_preview="Logic condition met")
+                except Exception:
+                    pass
+            continue
+
+        # Optional: Ask Gemini if we actually need this step (Agentic Pruning)
+        if step.get("optional") and state.get("research_result"):
+             # Logic to prune redundant steps if research was enough
+             pass
+
+        # --- PREPARE INPUT ---
+        try:
+            input_fn = step["input"]
+            tool_input = input_fn(state)
+        except Exception as e:
+            report.append(f"⚠️ Input prep failed for `{step_id}`: {e}")
+            continue
+
+        # --- GLOBAL WORKSPACE V2: POST CONCEPTS & SUPERVISOR GATE ---
+        try:
+            from tools.memory.global_workspace import post_concept, read_workspace
+            # 1. Post current concept/step to the workspace
+            step_concept = f"Orchestrator ({workflow}) running step: {label} (tool: {step_id}) for task: {task[:80]}"
+            post_concept(concept=step_concept, salience=0.6, agent_id=f"orch_{workflow}")
+
+            # 2. Supervisor Gate: Pause execution if any unresolved external watchlist alert exists
+            ws_data = read_workspace()
+            external_alerts = [a for a in ws_data.get("alerts", []) if a.get("agent_id") != f"orch_{workflow}"]
+            if external_alerts:
+                print(f"⏳ [Global Workspace Gate] Paused. {len(external_alerts)} unresolved external flagged alert(s) detected.")
+                report.append("⏳ **Global Workspace Gate:** Pipeline paused. Unresolved external flagged concept detected on the workspace.")
+                log_to_dashboard(f"WORKSPACE GATE PAUSED | Active Alerts: {len(external_alerts)}")
+
+                # Poll every 2.0s until resolved
+                while True:
+                    await asyncio.sleep(2.0)
+                    ws_data = read_workspace()
+                    external_alerts = [a for a in ws_data.get("alerts", []) if a.get("agent_id") != f"orch_{workflow}"]
+                    if not external_alerts:
+                        break
+
+                report.append("✅ **Global Workspace Gate:** Watchlist alert resolved. Resuming execution.")
+                print("✅ [Global Workspace Gate] Watchlist alert resolved. Resuming execution.")
+                log_to_dashboard("WORKSPACE GATE RESOLVED | Resuming tool execution")
+        except Exception as ws_err:
+            print(f"⚠️ Global Workspace hooks failed: {ws_err}")
+
+        # --- EXECUTE TOOL ---
+        print(f"🔧 [{step_count}] {label}")
+        try:
+            # --- STRATEGY LAYER (System 4) ---
+            confidence = governor.get_tool_confidence(step_id)
+            save_topology(tasks_ref, {"active_system": "governor", "tool": step_id, "status": "strategizing"})
+            report.append(f"### Step {step_count}: {label}")
+            report.append(f"> 🧠 **System 4 Confidence:** {confidence:.2%}")
+
+            # --- TELEMETRY ---
+            brain_source = await _get_active_brain()
+            log_to_dashboard(f"{brain_source} | TOOL START: {step_id}")
+            log_to_dashboard(f"INPUT -> {str(tool_input)[:100]}...")
+
+            # Dynamic calibration per-step
+            current_multiplier = get_timeout_multiplier()
+            # Gemini steps get their own dedicated budget; all others share the base
+            if step_id in GEMINI_STEPS:
+                effective_timeout = settings.GEMINI_STEP_TIMEOUT
+            else:
+                effective_timeout = TOOL_TIMEOUT * current_multiplier
+            start_time = time.time()
+            if asyncio.iscoroutinefunction(step["tool"]):
+                result = await asyncio.wait_for(step["tool"](**tool_input), timeout=effective_timeout)
+            else:
+                # Wrap synchronous tools in an isolated ThreadPoolExecutor to prevent global thread exhaustion DoS
+                import concurrent.futures
+                loop = asyncio.get_running_loop()
+                executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+
+                # We use a wrapper function because run_in_executor expects a zero-argument callable if kwargs are passed
+                def _run_tool():
+                    return step["tool"](**tool_input)
+
+                future = loop.run_in_executor(executor, _run_tool)
+                try:
+                    result = await asyncio.wait_for(future, timeout=effective_timeout)
+                finally:
+                    # Shutdown isolated pool immediately without blocking the event loop.
+                    # Active zombie threads will eventually die, but won't exhaust asyncio's default pool.
+                    executor.shutdown(wait=False, cancel_futures=True)
+            duration = time.time() - start_time
+
+            log_to_dashboard(f"OUTPUT <- {str(result)[:100]}...")
+            save_topology(tasks_ref, {"active_system": "execution", "tool": step_id, "status": "success"})
+
+            # --- UPDATE INTELLIGENCE & TELEMETRY ---
+            # Credit real tools by name; record non-tool pipeline stages under a
+            # step: namespace so they never masquerade as tools in the dashboard.
+            governor.update_intelligence(_telemetry_id(step_id), workflow, success=True)
+            log_tool_performance(step_id, success=True, duration=duration)
+            consecutive_failures = 0 # Reset circuit breaker on success
+
+            # Store result in state
+            output_key = step.get("output_key")
+            if output_key:
+                state[output_key] = result
+
+            # Add to full log for reflection - SAFELY & PRUNED
+            safe_result = str(result) if result is not None else "None"
+            new_log_entry = f"\n[STEP {step_count}] {label}\nRESULT: {safe_result[:1000]}...\n"
+            state["full_log"] = _prune_log(state.get("full_log", "") + new_log_entry, 8000)
+
+            # Truncate result for report (keep it readable) - SAFELY
+            safe_result = str(result) if result is not None else "None"
+            result_preview = safe_result[:800] if len(safe_result) > 800 else safe_result
+            if len(safe_result) > 800:
+                full_outputs.append((label, safe_result))
+            report.append(f"```\n{result_preview}\n```")
+            report.append("")
+
+            # --- PLANKA STEP SYNC & STEP_END (SUCCESS) ---
+            if planka_ctx:
+                try:
+                    from tools.strategy.planka_workflow import sync_pipeline_step
+                    sync_pipeline_step(planka_ctx, step_id, label, success=True, result_preview=result_preview)
+                except Exception as e:
+                    print(f"⚠️ Planka step sync failed: {e}")
+
+            if session_id:
+                try:
+                    from tools.memory.session_log import SessionLog
+                    SessionLog(session_id).step_end(
+                        turn_id, step_id, call_id, "SUCCESS",
+                        result_preview=result_preview[:200],
+                        duration_ms=duration * 1000,
+                    )
+                except Exception:
+                    pass
+
+        except asyncio.TimeoutError:
+            duration = TOOL_TIMEOUT * settings.SWARM_TIMEOUT_MULTIPLIER
+            step_status = "TIMEOUT"
+            error_msg = f"⏱️ `{step_id}` TIMED OUT after {duration}s. Swarm watchdog intervened."
+            report.append(error_msg)
+            print(f"   {error_msg}")
+            consecutive_failures += 1
+
+            # --- PLANKA STEP SYNC (TIMEOUT) ---
+            if planka_ctx:
+                try:
+                    from tools.strategy.planka_workflow import sync_pipeline_step
+                    sync_pipeline_step(planka_ctx, step_id, label, success=False, result_preview=error_msg)
+                except Exception as e:
+                    print(f"⚠️ Planka step sync failed: {e}")
+
+            if session_id:
+                try:
+                    from tools.memory.session_log import SessionLog
+                    SessionLog(session_id).step_end(
+                        turn_id, step_id, call_id, "TIMEOUT",
+                        result_preview=error_msg[:200],
+                        duration_ms=duration * 1000,
+                    )
+                except Exception:
+                    pass
+        except Exception as e:
+            duration = time.time() - start_time if "start_time" in locals() else 0
+            step_status = "FAILED"
+            error_msg = f"❌ `{step_id}` failed: {e}"
+            report.append(error_msg)
+            print(f"   {error_msg}")
+            consecutive_failures += 1
+
+            # --- UPDATE INTELLIGENCE & TELEMETRY (FAILURE) ---
+            governor.update_intelligence(_telemetry_id(step_id), workflow, success=False)
+            log_tool_performance(step_id, success=False, duration=duration)
+
+            # --- PLANKA STEP SYNC (FAILURE) ---
+            if planka_ctx:
+                try:
+                    from tools.strategy.planka_workflow import sync_pipeline_step
+                    sync_pipeline_step(planka_ctx, step_id, label, success=False, result_preview=error_msg)
+                except Exception as e:
+                    print(f"⚠️ Planka step sync failed: {e}")
+
+            if session_id:
+                try:
+                    from tools.memory.session_log import SessionLog
+                    SessionLog(session_id).step_end(
+                        turn_id, step_id, call_id, "FAILED",
+                        result_preview=error_msg[:200],
+                        duration_ms=duration * 1000,
+                    )
+                except Exception:
+                    pass
+
+            # --- BACKTRACKING OR FALLBACK ---
+            on_failure = step.get("on_failure")
+            fallback_tool_id = step.get("fallback_to")
+
+            if fallback_tool_id and fallback_tool_id in tools:
+                report.append(f"\n🔄 **Neural Failover:** Pivoting to `{fallback_tool_id}` (Local fallback)")
+                print(f"   🔄 Failover: Rerouting task to {fallback_tool_id}...")
+
+                # Execute fallback tool with smart input mapping
+                fallback_tool = tools[fallback_tool_id]
+                try:
+                    # Smart mapping: Gemini inputs -> Supervisor inputs
+                    if fallback_tool_id == "consult_supervisor":
+                        mapped_input = {
+                            "user_proposal": state.get("task", "Analyze this code"),
+                            "code_snippet": tool_input.get("code_snippet", "") if isinstance(tool_input, dict) else ""
+                        }
+                    else:
+                        mapped_input = tool_input
+
+                    fallback_result = await fallback_tool(**mapped_input) if asyncio.iscoroutinefunction(fallback_tool) else fallback_tool(**mapped_input)
+
+                    # Store result and continue
+                    output_key = step.get("output_key")
+                    if output_key:
+                        state[output_key] = fallback_result
+                    report.append(f"✅ Fallback successful: {str(fallback_result)[:200]}...")
+                    continue # Success in fallback, proceed to next step
+                except Exception as fe:
+                    report.append(f"⚠️ Fallback also failed: {fe}")
+
+            if on_failure == "backtrack" and state.get("file_path"):
+                state["backtrack_count"] += 1
+                if state["backtrack_count"] <= 2:
+                    report.append(f"\n🔄 **Backtracking** (attempt {state['backtrack_count']}/2)")
+                    try:
+                        restore_tool = tools.get("restore_checkpoint")
+                        if restore_tool:
+                            restore_result = restore_tool(
+                                file_path=state["file_path"],
+                                label="pre_fix",
+                            )
+                            report.append(f"Restored checkpoint: {restore_result[:200]}")
+                    except Exception as restore_err:
+                        report.append(f"⚠️ Restore failed: {restore_err}")
+                else:
+                    report.append("\n⛔ **Max backtrack attempts reached.** Manual intervention needed.")
+
+            # Continue to next step if we can't fix it
+            continue
+
+    # --- MAZE PROTOCOL GATE & POST-SWARM VERIFICATION ---
+    try:
+        if workflow in ["bug_fix", "research_implement"] and project_path:
+            print("🌀 System 2: Executing Maze Protocol (Backward Verification)...")
+            # Find the primary file to verify (usually state['target_file'] or similar)
+            target_file = state.get("file_path") or state.get("target_file")
+            if target_file:
+                maze_ok = backward_verify(target_file, project_path, run_tests=True)
+                if not maze_ok:
+                    report.append("\n⚠️ **MAZE PROTOCOL WARNING:** This modification failed backward verification or caused regressions. Manual review advised.")
+                    print(f"   ⚠️ Maze Protocol failed for {target_file}")
+                else:
+                    report.append("\n✅ **MAZE PROTOCOL VERIFIED:** Changes are rooted and behaviorally sound.")
+
+        # --- AUTOMATIC REFLECTION (System 5) ---
+        if workflow in ["bug_fix", "research_implement"] and "reflect_and_distill" in tools:
+            print("🧠 System 5: Triggering post-swarm reflection...")
+            logs = "\n".join(report)
+            reflection_data = tools["reflect_and_distill"](task, logs)
+
+            if isinstance(reflection_data, dict):
+                report.append("\n## 🧠 Architectural Reflection")
+                report.append(reflection_data.get("report", ""))
+
+                # Apply Bayesian Tuning
+                tuning_payload = reflection_data.get("tuning_payload", [])
+                if tuning_payload and "tune_swarm" in tools:
+                    print(f"⚖️ Tuning Swarm: Applying {len(tuning_payload)} updates...")
+                    for tune in tuning_payload:
+                        tools["tune_swarm"](tune["tool_id"], tune["success"], tune["category"])
+
+                    # --- NEW: AUTONOMIC CORRECTOR INJECTION ---
+                    print("🛠️ Autonomic Corrector: Queueing tuning payload for background processing...")
+                    corrector.queue_tuning(tuning_payload)
+                    corrector.run_correction_cycle() # Run immediately for now to verify
+            else:
+                # Fallback for simple string returns
+                report.append("\n## 🧠 Architectural Reflection")
+                report.append(str(reflection_data))
+
+        # --- MARS BOUNDARY VERIFICATION (The Spline Audit) ---
+        print("🛡️ System 2: Running MARS Boundary Audit...")
+        # Extract workflow-based category
+        mars_cat = "bug_fix"
+        if workflow == "ui_design": mars_cat = "ui"
+        if workflow == "security_audit": mars_cat = "security"
+
+        # Check current diff if available in state
+        current_diff = state.get("last_diff", "")
+        if not current_diff and "code_snippet" in state:
+            current_diff = state["code_snippet"]
+
+        if current_diff:
+            is_on_curve, message = mars_auditor.evaluate_boundary(mars_cat, current_diff)
+            if not is_on_curve:
+                report.append(f"\n⚠️ **MARS BOUNDARY BREACH:** {message}")
+                print(f"   ⚠️ MARS Breach: {message}")
+            else:
+                report.append(f"\n✅ **MARS BOUNDARY VERIFIED:** {message}")
+    except Exception as fatal_e:
+        terminal_status = "CRASHED"
+        error_taxonomy = "InternalCrash"
+        report.append(f"\n🚨 **FATAL PIPELINE CRASH:** {type(fatal_e).__name__}: {fatal_e}")
+
+    # --- DSH-06 TURN ENCLOSURE: GUARANTEED TERMINATION ---
+    if planka_ctx:
+        try:
+            from tools.strategy.planka_workflow import sync_pipeline_end
+            pipeline_success = (consecutive_failures < 3) and token_governor.can_spend(0.0) and (terminal_status == "SUCCESS")
+            final_report_str = "\n".join(report)
+            summary_lines = []
+            if "## 🧠 Architectural Reflection" in final_report_str:
+                parts = final_report_str.split("## 🧠 Architectural Reflection")
+                summary_lines.append("### 🧠 Architectural Reflection\n" + parts[-1].strip())
+            else:
+                summary_lines.append(f"Pipeline finished [{terminal_status}] with {consecutive_failures} failures.")
+            sync_pipeline_end(planka_ctx, pipeline_success, "\n".join(summary_lines))
+        except Exception as e:
+            print(f"⚠️ Planka end sync failed: {e}")
+
+    if session_id:
+        try:
+            from tools.memory.session_log import SessionLog
+            SessionLog(session_id).turn_end(
+                turn_id,
+                terminal_status,
+                error_taxonomy=error_taxonomy,
+                summary=f"Workflow {workflow} completed [{terminal_status}] ({step_count} steps, {consecutive_failures} failures)",
+                meta={
+                    "workflow": workflow,
+                    "step_count": step_count,
+                    "consecutive_failures": consecutive_failures,
+                    "duration_sec": time.time() - t0_turn,
+                }
+            )
+        except Exception as se:
+            print(f"⚠️ Session turn_end emission failed: {se}")
+
+    if full_outputs:
+        report.append("\n---\n\n## 📎 Full step outputs")
+        report.append(
+            "_The step log above is clipped to 800 characters per step; "
+            "the complete text of each clipped step follows._"
+        )
+        for label, text in full_outputs:
+            if len(text) > MAX_FULL_OUTPUT_CHARS:
+                text = text[:MAX_FULL_OUTPUT_CHARS] + (
+                    f"\n\n[... truncated at {MAX_FULL_OUTPUT_CHARS} chars ...]"
+                )
+            report.append(f"### {label}")
+            report.append(text)
+
+    return "\n\n".join(report)
+
+
+# --- 6. PRO STACK ENTRY POINT ---
+
+def _analyze_bug(
+    task: str,
+    file_path: str = "",
+    code_snippet: str = "",
+    project_path: str = "",
+    past_fixes: str = "",
+    **_unused_kwargs,
+) -> str:
+    """
+    Diagnose a bug and propose a concrete patch.
+
+    This closes the long-standing gap where the `bug_fix` pipeline would
+    silently exit as "Unresolved" whenever no past memory hit existed and
+    no file_path/code_snippet was supplied: every conditional step was
+    skipped and no LLM ever inspected the bug.
+
+    Strategy:
+      1. If file_path exists and is small enough, read it for ground truth.
+      2. Compose a tight diagnostic prompt (error/log + optional code).
+      3. Call the gateway LLM (LM Studio → Ollama → cloud fallback).
+      4. Return the analyzer's verdict as a string the pipeline can persist.
+
+    The trailing **_unused_kwargs sink absorbs spurious kwargs (e.g. ``tech_key``)
+    that older or hot-reloaded pipeline definitions may still pass. Without it,
+    the orchestrator step crashes with ``TypeError: _analyze_bug() got an
+    unexpected keyword argument ...`` whenever ``skip_if`` does not mask the step.
+    Mirrors the ``**kwargs`` pattern used by the ``review_code_with_gemini`` lambda
+    in ``server.py::_build_orchestrate_registry``.
+    """
+    file_context = ""
+    if file_path:
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                raw = f.read()
+            # Cap to ~6k chars to leave plenty of room for the prompt
+            file_context = raw[:6000]
+            if len(raw) > 6000:
+                file_context += "\n\n[...truncated, file longer than 6000 chars...]"
+        except Exception as read_err:
+            file_context = f"[Could not read file: {read_err}]"
+
+    memory_block = ""
+    if past_fixes:
+        snippet = str(past_fixes)[:1500]
+        memory_block = f"\n\nPAST FIXES (from error memory, may or may not apply):\n{snippet}"
+
+    code_block = ""
+    if code_snippet:
+        code_block = f"\n\nCALLER-SUPPLIED CODE/CONTEXT:\n{code_snippet[:3000]}"
+
+    file_block = ""
+    if file_context:
+        file_block = f"\n\nTARGET FILE ({file_path}):\n```\n{file_context}\n```"
+
+    project_block = f"\n\nPROJECT ROOT: {project_path}" if project_path else ""
+
+    system_prompt = (
+        "You are the Kenbun bug-fix analyzer. Diagnose the issue and propose a concrete patch. "
+        "Be terse. Output sections in this exact order with these exact headers:\n"
+        "ROOT CAUSE: <1-3 sentences>\n"
+        "PATCH: <a unified diff OR the exact replacement code, fenced. If no code change is needed "
+        "(e.g. the fix is a container restart, env var change, schema migration), say so plainly.>\n"
+        "VERIFICATION: <how to confirm the fix landed: command, test, log line to grep>"
+    )
+    user_message = (
+        f"BUG / ERROR / TASK:\n{task}"
+        f"{project_block}"
+        f"{file_block}"
+        f"{code_block}"
+        f"{memory_block}"
+    )
+
+    try:
+        from tools.utils.llm_router import call_llm_gateway
+        return call_llm_gateway(system_prompt, user_message, temperature=0.1, max_tokens=2000)
+    except Exception as e:
+        return (
+            f"⚠️ Bug analyzer LLM call failed: {e}\n\n"
+            f"Manual triage required. Re-run after restoring LLM gateway connectivity."
+        )
+
+
+def orchestrate(workflow: str, task: str, file_path: str = "", project_path: str = "", code_snippet: str = "", tech_key: str = "", project_id: str = "", fast: bool = False, session_id: str = ""):
+    """
+    Synchronous entry point for the Pro Stack.
+    Usage: orchestrate("bug_fix", task="Fix the leak", file_path="app.py")
+    """
+    # ⚡ Bang Trigger Interception Protocol
+    if (workflow and str(workflow).strip().startswith("!")) or (task and str(task).strip().startswith("!")):
+        from tools.strategy.bang_dispatcher import dispatch_bang_command
+        cmd_str = f"{workflow} {task}".strip() if (workflow and str(workflow).strip().startswith("!")) else str(task).strip()
+        return dispatch_bang_command(cmd_str)
+
+    import asyncio
+    import threading
+
+    tools = build_pipeline_tools(project_path)
+
+    result_box = []
+    err_box = []
+
+    def _runner():
+        try:
+            # Always create a brand new loop for this thread to guarantee no conflicts
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            result = new_loop.run_until_complete(run_pipeline(
+                workflow=workflow,
+                task=task,
+                tools=tools,
+                project_path=project_path,
+                file_path=file_path,
+                code_snippet=code_snippet,
+                tech_key=tech_key,
+                project_id=project_id,
+                fast=fast,
+                session_id=session_id,
+            ))
+            result_box.append(result)
+        except Exception as e:
+            err_box.append(e)
+        finally:
+            try:
+                new_loop.close()
+            except:
+                pass
+
+    t = threading.Thread(target=_runner)
+    t.start()
+    t.join()
+
+    if err_box:
+        raise err_box[0]
+    return result_box[0]
+
+# Alias for backwards compatibility with orchestration_tools.py
+run_orchestration_pipeline = orchestrate
+
+def swarm(objective: str, project_path: str = "."):
+    """
+    Synchronous entry point for triggering a full autonomous swarm.
+    Usage: swarm("Build a new landing page for the burger shop")
+    """
+    import asyncio
+
+    tools = build_pipeline_tools(project_path)
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        import concurrent.futures
+        def _run_in_thread():
+            return asyncio.run(spawn_swarm(objective, tools, project_path))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(_run_in_thread).result()
+    else:
+        return asyncio.run(spawn_swarm(objective, tools, project_path))
+
+if __name__ == "__main__":
+    # Example usage
+    import argparse
+    parser = argparse.ArgumentParser(description="Kenbun Orchestrator")
+    parser.add_argument("workflow", help="Pipeline to run (bug_fix, code_review, etc.)")
+    parser.add_argument("--task", required=True, help="Task description")
+    parser.add_argument("--file", default="", help="Target file path")
+
+    args = parser.parse_args()
+    print(orchestrate(args.workflow, task=args.task, file_path=args.file))

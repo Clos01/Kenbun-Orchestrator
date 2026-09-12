@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 🎯 KENBUN ORCHESTRATE CLI
+# Run any Kenbun autonomous workflow directly from your terminal.
+# Usage:
+#   bin/orchestrate <workflow> "<task description>" [project_path]
+# Examples:
+#   bin/orchestrate vcs_qa "Verify contact intake changes"
+#   bin/orchestrate bug_fix "Fix the database timeout in connection pool"
+# ==============================================================================
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Find Python binary (prefer venv)
+if [ -f "${DIR}/.venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+else
+    PYTHON_BIN="python"
+fi
+
+if [ "$#" -lt 1 ]; then
+    echo "Usage: bin/orchestrate <workflow> \"<task description>\" [project_path]"
+    echo ""
+    echo "Available workflows:"
+    echo "  • vcs_qa               — Ingest diffs, verify AST, check STRUCTURE.md, output conventional commit"
+    echo "  • bug_fix              — Scan repo, recall past fixes, checkpoint, test, remember"
+    echo "  • code_review          — Gemini review, official docs, supervisor cross-check"
+    echo "  • research_implement   — Research official docs, build blueprint, supervisor audit"
+    echo "  • design_ui            — Heritage design tokens, bento grid, responsive layout"
+    echo "  • wireframe            — Deterministic layout generation and geometric validation"
+    exit 1
+fi
+
+WORKFLOW="$1"
+TASK="${2:-Run $WORKFLOW workflow}"
+PROJECT_PATH="${3:-.}"
+
+export PYTHONPATH="${DIR}:${DIR}/core:${PYTHONPATH:-}"
+
+exec "$PYTHON_BIN" -c "
+import sys
+from pathlib import Path
+
+sys.path.insert(0, '${DIR}/core')
+sys.path.insert(0, '${DIR}')
+
+from tools.infrastructure.orchestrator import orchestrate
+
+workflow = sys.argv[1]
+task = sys.argv[2]
+project_path = sys.argv[3] if len(sys.argv) > 3 else '.'
+
+try:
+    print(f'🚀 Launching Kenbun Orchestrator workflow: [{workflow}]')
+    print(f'🎯 Task: \"{task}\"')
+    print(f'📂 Path: {project_path}\n')
+    
+    result = orchestrate(
+        workflow=workflow,
+        task=task,
+        project_path=project_path,
+        fast=False
+    )
+    print(result)
+except Exception as e:
+    print(f'❌ Orchestrator Error: {e}', file=sys.stderr)
+    sys.exit(1)
+" "$WORKFLOW" "$TASK" "$PROJECT_PATH"

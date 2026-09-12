@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 🎯 FLOORING TARGETING & PERSONA CLI
+# Classify incoming building permits, compute automated turnkey take-offs,
+# generate 60-minute sprint elevator pitches, and sync with Kanban.
+#
+# Usage:
+#   bin/flooring-target --sample
+#   bin/flooring-target --address "200 Commerce Blvd" --value 250000 --desc "dental clinic upfit"
+# ==============================================================================
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Find Python binary
+if [ -f "${DIR}/.venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+else
+    PYTHON_BIN="python"
+fi
+
+export PYTHONPATH="${DIR}:${DIR}/core:${PYTHONPATH:-}"
+
+exec "$PYTHON_BIN" -c "
+import sys
+import argparse
+from pathlib import Path
+
+sys.path.insert(0, '${DIR}')
+sys.path.insert(0, '${DIR}/core')
+
+from tools.strategy.flooring_target_engine import FlooringTargetEngine, FlooringLeadInput
+from tools.strategy.flooring_orchestrator import FlooringPipelineOrchestrator
+
+parser = argparse.ArgumentParser(description='Flooring Lead Persona & Take-off CLI')
+parser.add_argument('--sample', action='store_true', help='Run sample permit batch across all 4 personas')
+parser.add_argument('--address', default='', help='Target property address')
+parser.add_argument('--contractor', default='', help='Contractor / Builder name')
+parser.add_argument('--permit-type', default='', help='Permit Type (e.g. New Single Family, Commercial)')
+parser.add_argument('--value', type=float, default=0.0, help='Permit Valuation ($)')
+parser.add_argument('--sqft', type=float, default=0.0, help='Total Building SqFt')
+parser.add_argument('--desc', default='', help='Permit scope / work description')
+parser.add_argument('--phone', default='', help='Contractor contact phone')
+parser.add_argument('--sync', action='store_true', help='Sync classified lead into Kenbun Sovereign Kanban board')
+
+args = parser.parse_args()
+
+if args.sample:
+    print('🚀 Running full sample permit batch provisioning across the 4 personas...')
+    res = FlooringPipelineOrchestrator.run_pipeline()
+    print('\n✅ Full batch successfully classified and provisioned!')
+    sys.exit(0)
+
+if not args.address and not args.desc:
+    print('Please provide --sample OR --address and --desc.')
+    print('Example: bin/flooring-target --address \"100 Grandview Way\" --value 1450000 --desc \"custom luxury estate\"')
+    sys.exit(1)
+
+lead = FlooringLeadInput(
+    address=args.address or 'Quick Target Site',
+    contractor_name=args.contractor,
+    permit_type=args.permit_type,
+    valuation=args.value,
+    total_sqft=args.sqft,
+    description=args.desc,
+    phone=args.phone
+)
+
+targeted = FlooringTargetEngine.classify_lead(lead)
+takeoff = targeted.takeoff
+
+print(f'\n' + '='*70)
+print(f'🎯 PERSONA MATCH: {targeted.persona_label} (#{targeted.tag})')
+print(f'📈 Confidence Score: {targeted.confidence_score}%')
+print(f'='*70)
+print(f'📍 Address: {targeted.input_data.address}')
+print(f'🏗️ Contractor: {targeted.input_data.contractor_name or \"Unlisted (Sprint Recon Required)\"}')
+print(f'💰 Permit Value: \${targeted.input_data.valuation:,.2f}')
+print(f'\n--- 📐 TURNKEY TAKEOFF ---')
+print(f'• Estimated Flooring Area: {takeoff.flooring_sqft:,.1f} sq ft')
+print(f'• Material: {takeoff.material_type} (\${takeoff.material_rate_per_sqft:.2f}/sqft)')
+print(f'• Labor: \${takeoff.labor_rate_per_sqft:.2f}/sqft | Prep: \${takeoff.subfloor_prep_rate_per_sqft:.2f}/sqft')
+print(f'• TOTAL ESTIMATED BID: \${takeoff.est_total_bid:,.2f}')
+print(f'\n--- 🎙️ 60-MINUTE SPRINT PITCH ---')
+print(f'> \"{targeted.pitch_script}\"')
+print(f'\n--- 🛠️ SPRINT CHECKLIST ---')
+for item in targeted.collateral_checklist:
+    print(f'  [ ] {item}')
+print(f'='*70 + '\n')
+
+if args.sync:
+    from tools.strategy.kanban_tools import kanban_create
+    card = FlooringTargetEngine.format_kanban_card(targeted)
+    tid = kanban_create(title=card['title'], body=card['body'], assignee='field_contractor', tenant='flooring', priority=card['priority'], status='todo')
+    print(f'📋 Synced to Sovereign Kanban as Task ID: {tid}')
+" "$@"

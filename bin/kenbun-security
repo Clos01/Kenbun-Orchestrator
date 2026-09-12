@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 🛡️ KENBUN SYSTEM SECURITY & BUILD PROTECTION CLI
+# Host hardening, agent permissions governance, Docker sanitization & build audit
+# Usage:
+#   bin/kenbun-security audit-host
+#   bin/kenbun-security audit-build [project_path]
+#   bin/kenbun-security harden
+#   bin/kenbun-security presets
+#   bin/kenbun-security orchestrate [task]
+# ==============================================================================
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ -f "${DIR}/venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/venv/bin/python"
+elif [ -f "${DIR}/.venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+else
+    PYTHON_BIN="python"
+fi
+
+ACTION="${1:-audit-host}"
+TARGET="${2:-.}"
+
+export PYTHONPATH="${DIR}:${DIR}/core:${PYTHONPATH:-}"
+export PROJECT_ROOT="${DIR}"
+
+exec "$PYTHON_BIN" -c "
+import sys
+from pathlib import Path
+
+sys.path.insert(0, '${DIR}/core')
+sys.path.insert(0, '${DIR}')
+
+action = sys.argv[1]
+target = sys.argv[2] if len(sys.argv) > 2 else '.'
+
+if action == 'audit-host':
+    from tools.security.system_security_sentinel import audit_system_security
+    print(audit_system_security())
+elif action == 'audit-build':
+    from tools.security.build_protection_sentinel import audit_software_build
+    print(audit_software_build(target))
+elif action == 'harden':
+    from tools.security.system_security_sentinel import harden_system_security
+    from tools.security.build_protection_sentinel import BuildProtectionSentinel
+    print(harden_system_security())
+    sentinel = BuildProtectionSentinel(project_root=Path(target).resolve())
+    print('Sanitizing build context:', sentinel.sanitize_build_context())
+elif action == 'presets':
+    from tools.security.agent_permission_governor import get_security_preset
+    print(get_security_preset())
+elif action == 'orchestrate':
+    from tools.infrastructure.orchestrator import orchestrate
+    task_desc = target if target != '.' else 'Audit host and software build protection'
+    print(orchestrate('system_security', task=task_desc))
+else:
+    print(f'Usage: bin/kenbun-security [audit-host | audit-build | harden | presets | orchestrate]')
+    sys.exit(1)
+" "$ACTION" "$TARGET"

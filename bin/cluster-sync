@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 🛰️ Kenbun Cluster Synchronizer (bin/cluster-sync)
+# Flawlessly mirrors Mac Sovereign Workbench to edge_node Satellite & Sovereign Gitea
+# ==============================================================================
+set -euo pipefail
+
+BOLD="\033[1m"
+GREEN="\033[0;32m"
+BLUE="\033[0;34m"
+YELLOW="\033[0;33m"
+NC="\033[0m"
+
+echo -e "${BOLD}${BLUE}🛰️ Kenbun Cluster Synchronization Initiated...${NC}"
+
+CURRENT_BRANCH=$(git branch --show-current)
+CURRENT_COMMIT=$(git log -n 1 --oneline)
+
+echo -e "📦 Active Branch: ${BOLD}${CURRENT_BRANCH}${NC} (${CURRENT_COMMIT})"
+
+# 0. Dynamic Cluster Mesh & MCP Parity Synthesis
+echo -e "\n${BLUE}➔ Probing cluster endpoints & synchronizing MCP configurations...${NC}"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHON_BIN="${DIR}/core/.venv/bin/python3"
+if [ -f "${PYTHON_BIN}" ]; then
+    "${PYTHON_BIN}" "${DIR}/core/tools/infrastructure/dynamic_cluster_mesh.py" || echo -e "${YELLOW}⚠️ Dynamic mesh probe completed with warnings.${NC}"
+fi
+
+# 1. Sync to edge_node Edge Compute Node (Headless Execution Satellite)
+echo -e "\n${BLUE}➔ Mirroring to edge_node (<REMOTE_HOST_IP>)...${NC}"
+if git remote | grep -q "edge_node"; then
+    if git push -f edge_node "${CURRENT_BRANCH}"; then
+        echo -e "${GREEN}✓ edge_node working tree synchronized to ${CURRENT_BRANCH}.${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Failed to push to edge_node. Check Tailscale connectivity.${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠️ Remote 'edge_node' not configured.${NC}"
+fi
+
+# 2. Sync to Sovereign Gitea (Local GPU Server)
+echo -e "\n${BLUE}➔ Mirroring to Sovereign Gitea (gitea_server:2222)...${NC}"
+if git remote | grep -q "sovereign"; then
+    if git push sovereign "${CURRENT_BRANCH}" 2>/dev/null; then
+        echo -e "${GREEN}✓ Sovereign Gitea remote updated.${NC}"
+    else
+        echo -e "${YELLOW}ℹ️ Sovereign remote sync skipped or requires key auth.${NC}"
+    fi
+fi
+
+echo -e "\n${BOLD}${GREEN}✅ Kenbun Cluster Parity Complete.${NC}\n"

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Kenbun DeepSeek Harness Upstream Sentinel CLI
+# ==============================================================================
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+if [ -f "${REPO_ROOT}/venv/bin/python" ]; then
+    PYTHON="${REPO_ROOT}/venv/bin/python"
+elif [ -f "${REPO_ROOT}/core/.venv/bin/python" ]; then
+    PYTHON="${REPO_ROOT}/core/.venv/bin/python"
+else
+    PYTHON="python3"
+fi
+
+export PYTHONPATH="${REPO_ROOT}/core:${PYTHONPATH}"
+exec "${PYTHON}" "${REPO_ROOT}/core/tools/dsh/dsh_sentinel.py" "$@"

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 🛡️ KENBUN VCS & QA SENTINEL CLI
+# Autonomous Pre-Commit QA, AST static analysis, & conventional commit generator
+# Usage:
+#   bin/vcs-qa "<task description>" [project_path]
+# Examples:
+#   bin/vcs-qa "Streamline city and zip intake with smart metro radar"
+#   bin/vcs-qa "Fix email routing" ~/Dev/Projects/perez-flooring-solutions
+# ==============================================================================
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ -f "${DIR}/venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/venv/bin/python"
+elif [ -f "${DIR}/.venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+else
+    PYTHON_BIN="python"
+fi
+
+TASK="${1:-Verify code changes and generate conventional commit payload}"
+PROJECT_PATH="${2:-.}"
+
+export PYTHONPATH="${DIR}:${DIR}/core:${PYTHONPATH:-}"
+
+exec "$PYTHON_BIN" -c "
+import sys
+from pathlib import Path
+
+sys.path.insert(0, '${DIR}/core')
+sys.path.insert(0, '${DIR}')
+
+from tools.audit.vcs_qa_agent import audit_and_document_commit
+
+task = sys.argv[1]
+project_path = sys.argv[2] if len(sys.argv) > 2 else '.'
+
+try:
+    print(audit_and_document_commit(task=task, project_path=project_path))
+except Exception as e:
+    print(f'❌ VCS QA Error: {e}', file=sys.stderr)
+    sys.exit(1)
+" "$TASK" "$PROJECT_PATH"

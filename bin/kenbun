@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 🌸 KENBUN SOVEREIGN CLI LAUNCHER
+# Universal Terminal Agent REPL, MCP Matrix Gateway, & Cluster Supervisor
+# ==============================================================================
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PYTHONPATH="${DIR}:${DIR}/core:${PYTHONPATH:-}"
+
+# Prefer virtualenv if present
+if [ -f "${DIR}/.venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/.venv/bin/python"
+elif [ -f "${DIR}/venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/venv/bin/python"
+elif [ -f "${DIR}/core/.venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/core/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="python"
+    echo "❌ Error: Python 3 is required to run Kenbun CLI." >&2
+    exit 1
+fi
+
+# Direct Bang Command Execution
+if [ "$#" -ge 1 ] && [[ "$1" == \!* ]]; then
+    exec "$PYTHON_BIN" -c "
+import sys
+from tools.strategy.bang_dispatcher import dispatch_bang_command
+print(dispatch_bang_command(' '.join(sys.argv[1:])))
+" "$@"
+fi
+
+exec "$PYTHON_BIN" "${DIR}/scripts/terminal_chat.py" "$@"

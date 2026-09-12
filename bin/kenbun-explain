@@ -1,0 +1,205 @@
+#!/usr/bin/env python3
+"""
+Kenbun Cognitive Explainer (Feynman Reversible Decompressor)
+Translates complex software features, files, and architectures into:
+1. The 10-Year-Old Physical Metaphor (Zero Jargon)
+2. The 3-Box Mechanical Flow (Input -> Engine -> Vault/Screen)
+3. The 30-Second Elevator Defense (Verbatim script to speak out loud)
+4. The Freeze-Point Self-Test (1-question active recall drill)
+"""
+
+import sys
+import os
+import re
+
+BOLD = "\033[1m"
+GREEN = "\033[32m"
+BLUE = "\033[34m"
+YELLOW = "\033[33m"
+CYAN = "\033[36m"
+RED = "\033[31m"
+MAGENTA = "\033[35m"
+RESET = "\033[0m"
+
+KNOWLEDGE_BASE = {
+    "flooring": {
+        "title": "Flooring Contractor Permit Radar (Lead Pipeline)",
+        "metaphor": "Imagine 9 different town halls where people submit paperwork to redo their floors. Instead of hiring someone to drive to each town hall every morning, our software sends an automated mail carrier to read the public records, grab all the flooring projects, and pin them on a live radar map for our sales team.",
+        "box1": "Public Town Hall Open Data (ArcGIS APIs for Municipal Open Data Portals)",
+        "box2": "Python Ingestion Engine (Extracts homeowner address, square footage, valuation, contractor)",
+        "box3": "PostgreSQL Vault & Live Interactive Map (6,000+ pins with dynamic town dropdown)",
+        "elevator": [
+            "We pull public building permits from city databases across North Carolina every night.",
+            "Our engine filters out irrelevant projects and only keeps high-value flooring and renovation jobs.",
+            "The leads appear instantly on an interactive map, giving our estimators first-mover advantage before competitors even know the job exists."
+        ],
+        "freeze_point": "If someone asks: 'How does the map know what cities are available?'\nAnswer: 'The map never guesses or hardcodes cities. It queries the database for which towns have leads right now, and builds the dropdown dynamically.'"
+    },
+    "edge_node": {
+        "title": "ThinkStation edge_node Tiny Server (The Local Brain)",
+        "metaphor": "Think of it as our private high-performance utility closet. Instead of paying Amazon or Google $150 every month to rent a computer in the cloud, we have a whisper-quiet, ultra-fast mini-PC running 24/7 in our home that handles all our heavy databases, scrapers, and background jobs for pennies of electricity.",
+        "box1": "Our Local Network / Tailscale Mesh (Secure private tunnel from any laptop/phone)",
+        "box2": "Docker Containers (Independent mini-computers running our database, scrapers, and APIs)",
+        "box3": "Persistent SSD Storage (All our leads, transcripts, and AI memories stay 100% private and owned by us)",
+        "elevator": [
+            "The edge_node is our private, dedicated on-premise micro-server running 24/7.",
+            "It runs Docker containers that handle all our heavy scrapers and databases without cloud hosting bills.",
+            "We connect to it securely through our private encrypted mesh, so it works anywhere in the world."
+        ],
+        "freeze_point": "If someone asks: 'Why not just host this on Vercel or AWS?'\nAnswer: 'Cost and control. Running intensive 24/7 background scrapers and 6,000+ lead databases locally costs virtually zero dollars and eliminates cloud usage fees.'"
+    },
+    "dynamic": {
+        "title": "Dynamic Architecture (Zero-Hardcoding Law)",
+        "metaphor": "Hardcoding is like writing a grocery list on stone tablets—every time you want to buy milk, you have to chisel a new rock. Dynamic architecture is like having a smart basket that automatically counts whatever you toss into it. If we add 5 new cities tomorrow, the system discovers them automatically without touching a single line of code.",
+        "box1": "File System & Database Discovery (Auto-detecting installed scrapers and active data rows)",
+        "box2": "Dynamic Serialization API (Serializes whatever exists instead of a static list)",
+        "box3": "Self-Adapting Frontend (Dropdowns, filters, and maps adjust themselves on the fly)",
+        "elevator": [
+            "Our system is completely dynamic—there are zero hardcoded city lists or static switch statements.",
+            "Whenever a new scraper or town is added, the API auto-discovers it and updates the UI automatically.",
+            "This makes the codebase infinitely scalable without maintenance headaches."
+        ],
+        "freeze_point": "If someone asks: 'What happens if we expand to South Carolina or Georgia?'\nAnswer: 'We just drop a new scanner file into the folder. The API automatically detects it, runs it, and adds the new state to the dropdown with zero code changes.'"
+    },
+    "hivemind": {
+        "title": "Kenbun Hivemind (System 3 Memory)",
+        "metaphor": "Most AI tools have 10-minute goldfish memory—every time you open a new chat, you have to re-explain your whole life and company. Hivemind is our shared company brain. When we fix a bug or learn a lesson, it gets written into an indexed vault so the AI never makes the same mistake twice.",
+        "box1": "Past Bug Fixes, User Preferences, & Architectural Decisions",
+        "box2": "Vector Semantic Indexing (Chroma DB & Honcho matching meaning, not just exact words)",
+        "box3": "Active Agent Context (Pre-loading past lessons into every coding turn automatically)",
+        "elevator": [
+            "Hivemind is our persistent memory layer that connects across all our AI tools and sessions.",
+            "Whenever we solve a tricky problem or establish a design rule, it saves the fix permanently.",
+            "Next time an agent works on our code, it recalls that lesson so we never repeat past mistakes."
+        ],
+        "freeze_point": "If someone asks: 'How is this different from ChatGPT?'\nAnswer: 'ChatGPT forgets everything when you close the tab. Hivemind keeps a permanent, searchable memory of our entire codebase, past bugs, and architectural rules.'"
+    }
+}
+
+def analyze_file(filepath):
+    if not os.path.exists(filepath):
+        return None
+    with open(filepath, "r", encoding="utf-8") as f:
+        code = f.read()
+
+    filename = os.path.basename(filepath)
+    is_ui = bool(re.search(r'import.*React|useState|<div|export default function', code))
+    is_api = bool(re.search(r'APIRouter|@app\.|FastAPI|NextRequest|NextResponse', code))
+    is_scanner = bool(re.search(r'arcgis|scrape|fetch.*permit|requests\.get|BeautifulSoup', code))
+
+    if is_scanner:
+        return {
+            "title": f"Data Harvester: {filename}",
+            "metaphor": "This file is like a digital scout with a badge. It logs into public city databases, asks for the newest construction permits, filters out irrelevant projects, and converts the raw data into clean lead cards.",
+            "box1": "Raw Public Government Records (JSON / REST API)",
+            "box2": f"{filename} (Parsing addresses, dates, contractor names, and flooring tags)",
+            "box3": "Central Database / Lead Queue (Ready for sales team review)",
+            "elevator": [
+                f"This file ({filename}) connects to public municipal databases to extract raw permit filings.",
+                "It cleans messy government data into structured contractor and homeowner leads.",
+                "It deduplicates existing records so our database never gets bloated with duplicates."
+            ],
+            "freeze_point": "If someone asks: 'What happens if the city website is down or slow?'\nAnswer: 'The scraper uses defensive timeout wrappers and error handlers so it logs the issue cleanly and retries later without crashing the rest of the system.'"
+        }
+    elif is_api:
+        return {
+            "title": f"API Gateway / Backend Router: {filename}",
+            "metaphor": "This file is like the head waiter at a high-end restaurant. Customers (the frontend UI) ask for menus and food, and the waiter takes the order, checks with the kitchen (the database), and brings back exactly what was requested on a clean plate.",
+            "box1": "Frontend HTTP Requests (Filter by city, date range, or status)",
+            "box2": f"{filename} (Authenticates user, validates request parameters, queries SQL)",
+            "box3": "JSON Response Envelope (Delivers clean data to the browser in under 200ms)",
+            "elevator": [
+                f"This file ({filename}) acts as our secure bridge between the user interface and our database.",
+                "It validates incoming queries, checks permissions, and runs optimized SQL statements.",
+                "It formats the output into clean JSON so the frontend can render without lag."
+            ],
+            "freeze_point": "If someone asks: 'Why don't we let the frontend talk directly to the database?'\nAnswer: 'Security and speed. Direct database access exposes credentials and crashes under heavy loads; the API validates every request and protects our database.'"
+        }
+    elif is_ui:
+        return {
+            "title": f"User Interface Component: {filename}",
+            "metaphor": "This file is like the dashboard of an aircraft. Pilots don't look at the jet fuel combustion chambers directly; they look at gauges, dials, and interactive buttons. This component translates raw computer numbers into intuitive visual cards and controls.",
+            "box1": "User Clicks & Gestures (Selecting a city, toggling a filter, zooming a map)",
+            "box2": f"{filename} (React State Management & Framer Motion animations)",
+            "box3": "Rendered Visual Screen (Responsive layout for mobile, laptop, and 4K displays)",
+            "elevator": [
+                f"This component ({filename}) is responsible for the interactive user experience on screen.",
+                "It handles local user state, smooth animations, and zero-layout-shift rendering.",
+                "When a user interacts with a control, it dispatches fast updates to sync the view."
+            ],
+            "freeze_point": "If someone asks: 'How does this look on mobile or small screens?'\nAnswer: 'It adheres to our Responsive UI protocol—it scales proportionally, wraps cleanly, and never causes horizontal scrolling or truncated text.'"
+        }
+    else:
+        return {
+            "title": f"System Logic Module: {filename}",
+            "metaphor": "This file is an engine gear. It doesn't interact with the outside world directly; it provides specialized math, formatting, or validation to keep the machine running smoothly.",
+            "box1": "Raw Inputs from caller modules",
+            "box2": f"{filename} (Core transformation logic)",
+            "box3": "Deterministic output returned to caller",
+            "elevator": [
+                f"This file ({filename}) contains modular business logic separated from the UI and network layers.",
+                "Keeping this logic isolated makes our code testable, maintainable, and bug-resistant."
+            ],
+            "freeze_point": "If someone asks: 'Why is this in a separate file?'\nAnswer: 'Single Responsibility Principle—it does one job with high precision and zero side-effects.'"
+        }
+
+def print_explanation(data):
+    print(f"\n{BOLD}{CYAN}════════════════════════════════════════════════════════════════════════════════════{RESET}")
+    print(f"  🧠 {BOLD}KENBUN COGNITIVE DECOMPRESSOR: {data['title']}{RESET}")
+    print(f"  {YELLOW}The 'Never Go Blank Again' Accelerated Learning Framework{RESET}")
+    print(f"{BOLD}{CYAN}════════════════════════════════════════════════════════════════════════════════════{RESET}\n")
+
+    print(f"🧒 {BOLD}1. THE 10-YEAR-OLD METAPHOR (Zero Jargon / How to Imagine It):{RESET}")
+    print(f"   {data['metaphor']}\n")
+
+    print(f"📦 {BOLD}2. THE 3-BOX MECHANICAL SKELETON (Visual Flow):{RESET}")
+    print(f"   {GREEN}[ 1. INPUT / SOURCE ]{RESET}  -->  {data['box1']}")
+    print(f"             │")
+    print(f"             ▼")
+    print(f"   {BLUE}[ 2. ENGINE / LOGIC ]{RESET}  -->  {data['box2']}")
+    print(f"             │")
+    print(f"             ▼")
+    print(f"   {MAGENTA}[ 3. VAULT / SCREEN ]{RESET}  -->  {data['box3']}\n")
+
+    print(f"🗣️  {BOLD}3. THE 30-SECOND ELEVATOR DEFENSE (What to Say Out Loud When Asked):{RESET}")
+    for i, bullet in enumerate(data['elevator'], 1):
+        print(f"   {BOLD}{i}.{RESET} \"{bullet}\"")
+    print()
+
+    print(f"🎯 {BOLD}4. THE FREEZE-POINT DRILL (Your Safety Net):{RESET}")
+    print(f"   {YELLOW}{data['freeze_point']}{RESET}\n")
+
+    print(f"{BOLD}{CYAN}════════════════════════════════════════════════════════════════════════════════════{RESET}")
+    print(f"  💡 {BOLD}Memory Tip:{RESET} Don't try to memorize code. Just remember the 3 boxes: {GREEN}Input{RESET} -> {BLUE}Engine{RESET} -> {MAGENTA}Vault{RESET}.")
+    print(f"{BOLD}{CYAN}════════════════════════════════════════════════════════════════════════════════════{RESET}\n")
+
+def main():
+    if len(sys.argv) < 2:
+        print(f"{BOLD}Usage:{RESET}")
+        print("  bin/kenbun-explain <keyword>     (e.g., flooring, edge_node, dynamic, hivemind)")
+        print("  bin/kenbun-explain <filepath>    (e.g., bin/kenbun-explain src/components/DashboardBody.tsx)")
+        print("\nAvailable concepts: " + ", ".join(KNOWLEDGE_BASE.keys()))
+        sys.exit(0)
+
+    arg = sys.argv[1].strip().lower()
+
+    if arg in KNOWLEDGE_BASE:
+        print_explanation(KNOWLEDGE_BASE[arg])
+        return
+
+    if os.path.exists(sys.argv[1]):
+        data = analyze_file(sys.argv[1])
+        if data:
+            print_explanation(data)
+            return
+
+    for key, data in KNOWLEDGE_BASE.items():
+        if key in arg or arg in key:
+            print_explanation(data)
+            return
+
+    print(f"\n{RED}Concept or file '{sys.argv[1]}' not found.{RESET}")
+    print(f"Try one of: {', '.join(KNOWLEDGE_BASE.keys())} or pass an existing file path.")
+
+if __name__ == "__main__":
+    main()
