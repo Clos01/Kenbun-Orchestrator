@@ -104,7 +104,8 @@ DEFAULT_SYSTEM_TOOLS = {
     "intelligence_engine", "ripgrep_search", "view_file", "write_to_file",
     "spawn_background_task", "get_background_task_status", "kill_background_task",
     "list_background_tasks", "replace_file_content", "audit_execution_completeness",
-    "run_isolated_experiment",
+    "run_isolated_experiment", "consult_kenbun_mec", "consult_kenbun_pit",
+    "consult_kenbun_dyno", "consult_kenbun_wire", "consult_kenbun_sec", "consult_kenbun_doc",
 }
 
 

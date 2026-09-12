@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 📈 KENBUN-DYNO: The ECU & Dyno Tuner
+# Bayesian Swarm Horsepower, Confidence Curves & Latency Calibration
+# ==============================================================================
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ -f "${DIR}/venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/venv/bin/python"
+elif [ -f "${DIR}/.venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+else
+    PYTHON_BIN="python"
+fi
+
+export PYTHONPATH="${DIR}:${DIR}/core:${PYTHONPATH:-}"
+export PROJECT_ROOT="${DIR}"
+
+exec "$PYTHON_BIN" -c "
+import sys
+import json
+from tools.specialists.pit_crew import consult_kenbun_dyno
+
+tool_name = sys.argv[1] if len(sys.argv) > 1 else None
+
+res = json.loads(consult_kenbun_dyno(metric='status', tool_name=tool_name))
+
+print(f'\033[1m\033[35m📈 [KENBUN-DYNO REPORT]\033[0m Verdict: {res.get(\"verdict\")}')
+print(f'⚙️  Active Source: {res.get(\"database_source\")} | Fallback Active: {res.get(\"fallback_active\")}')
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+print('🐎 Swarm Tool Confidence & Win-Rate Curves:')
+for t, data in res.get('tool_confidence_curves', {}).items():
+    print(f'  • {t:<28} Win-Rate: \033[32m{data.get(\"win_rate\")}\033[0m (α={data.get(\"alpha\")}, β={data.get(\"beta\")})')
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+" "$@"

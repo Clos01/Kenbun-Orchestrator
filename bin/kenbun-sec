@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# 🛡️ KENBUN-SEC: The Armoured Guard & Locksmith
+# Zero-leak audit, token protection & file permission governance
+# ==============================================================================
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ -f "${DIR}/venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/venv/bin/python"
+elif [ -f "${DIR}/.venv/bin/python" ]; then
+    PYTHON_BIN="${DIR}/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+else
+    PYTHON_BIN="python"
+fi
+
+export PYTHONPATH="${DIR}:${DIR}/core:${PYTHONPATH:-}"
+export PROJECT_ROOT="${DIR}"
+
+exec "$PYTHON_BIN" -c "
+import sys
+import json
+from tools.specialists.pit_crew import consult_kenbun_sec
+
+target = sys.argv[1] if len(sys.argv) > 1 else None
+
+res = json.loads(consult_kenbun_sec(scan_type='zero_leak', target_dir=target))
+
+color = '\033[32m' if res.get('verdict') == 'CLEAR_TO_PUSH' else '\033[31m'
+print(f'\033[1m{color}🛡️ [KENBUN-SEC REPORT]\033[0m Verdict: {res.get(\"verdict\")}')
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+print(f'🔒 Zero-Leak Status: {res.get(\"zero_leak_status\")}')
+if res.get('leaks_found', 0) == 0:
+    print('✅ Clean. Zero private user paths or exposed tokens found.')
+else:
+    print(f'🚨 Found {res.get(\"leaks_found\")} leaks:')
+    for item in res.get('findings', []):
+        print(f'  • {item.get(\"file\")}:{item.get(\"line\")} -> {item.get(\"match\")}')
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+" "$@"

@@ -36,6 +36,7 @@ from tools.execution.oom_safe_harness import *
 from tools.execution.surgical_editor import *
 from tools.infrastructure.workspace_tools import *
 from tools.memory.hivemind_tools import *
+from tools.specialists.pit_crew import *
 from tools.strategy.orchestration_tools import *
 from tools.utils.helpers import *
 
