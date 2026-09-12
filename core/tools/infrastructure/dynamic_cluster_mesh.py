@@ -162,7 +162,7 @@ def generate_node_mcp_config(node_type: str, endpoints: Dict[str, Any]) -> Dict[
             "POSTGRES_USER": endpoints["postgres"]["user"],
             "POSTGRES_PASSWORD": endpoints["postgres"]["password"],
             "POSTGRES_DB": endpoints["postgres"]["db"],
-            "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY_HERE")
+            "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY", "")
         }
     }
 
@@ -194,7 +194,7 @@ def write_local_configs(config: Dict[str, Any]) -> list[str]:
 
 def sync_remote_p330(endpoints: Dict[str, Any]) -> Dict[str, Any]:
     """Syncs configuration to Edge_Node over SSH."""
-    p330_ip = os.getenv("COMPUTE_NODE_IP", "127.0.0.1")
+    p330_ip = os.environ.get("P330_IP_ADDRESS", os.environ.get("P330_IP", os.getenv("COMPUTE_NODE_IP", "127.0.0.1")))
     p330_cfg = generate_node_mcp_config("Edge_Node", endpoints)
     cfg_json = json.dumps(p330_cfg)
 

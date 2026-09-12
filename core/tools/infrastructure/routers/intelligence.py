@@ -7,6 +7,7 @@ hivemind concept mapping, and semantic memory retrieval.
 Extracted from tools.infrastructure.api_server as a pure structural refactor.
 """
 
+import os
 import logging
 import hashlib
 import random
@@ -34,8 +35,9 @@ class MemoryRetrieveRequest(BaseModel):
     project_path: str = Field(..., description="The directory path of the active project")
     limit: int = Field(8, description="Maximum results to return")
 
-DEFAULT_WEBSITE = "https://example.com"
-DEFAULT_CONTACT_PHONE = "(555) 019-2834"
+DEFAULT_WEBSITE = os.getenv("LEAD_WEBSITE_URL", "https://example.com")
+DEFAULT_CONTACT_PHONE = os.getenv("LEAD_CONTACT_PHONE", "(555) 019-2834")
+DEFAULT_NOTIFY_EMAIL = os.getenv("LEAD_NOTIFY_EMAIL", "notifications@example.com")
 
 class B2BOutreachRequest(BaseModel):
     client_name: Optional[str] = Field("Valued Partner", description="Target client or contractor name")
@@ -119,20 +121,24 @@ async def generate_b2b_outreach_email(req: B2BOutreachRequest) -> Dict[str, str]
     source_api = req.source or "PlankMap Open Data API"
     target_email = req.email.strip() if req.email and req.email.strip() else "[No Direct Email Listed — Verification Required]"
 
-    subject = f"Subcontractor Bid List: Commercial Flooring - Commercial Partner ({company})"
+    company_signature = os.getenv("LEAD_COMPANY_NAME", "Commercial Flooring Partners")
+    persona_signature = os.getenv("LEAD_PERSONA_NAME", "Commercial Estimator")
+    service_area_note = os.getenv("LEAD_SERVICE_AREA", "the greater metropolitan region")
+
+    subject = f"Subcontractor Bid List: Commercial Flooring - {company_signature} ({company})"
 
     extra_field_note = ""
     if "[Field Edit Instruction]:" in req.work_details:
         instruction_text = req.work_details.split("[Field Edit Instruction]:")[1].strip()
-        extra_field_note = f"\n\nNote: We also cover the greater regional market. ({instruction_text})"
+        extra_field_note = f"\n\nNote: We also cover {service_area_note}. ({instruction_text})"
 
     body = (
         f"{greeting},\n\n"
-        f"I'm Estimator with Commercial Partner. Reaching out to see how we can get added to {company}'s approved subcontractor / bid list for upcoming commercial flooring jobs in {address}.\n\n"
+        f"I'm with {company_signature}. Reaching out to see how we can get added to {company}'s approved subcontractor / bid list for upcoming commercial flooring jobs in {address}.\n\n"
         f"We handle commercial carpet, LVP, carpet tile, and hardwood installation across the area. Fully licensed, insured, and focused on executing project scopes on schedule with clear communication.{extra_field_note}\n\n"
         f"Do you have a preferred vendor application form or estimator contact for bidding upcoming work? You can also check out our past projects at {company_website}.\n\n"
         f"Best,\n\n"
-        f"Estimator | Commercial Partner\n"
+        f"{persona_signature} | {company_signature}\n"
         f"Direct: {contact_phone}\n"
         f"{company_website}"
     )
@@ -253,12 +259,12 @@ async def generate_b2b_outreach_email(req: B2BOutreachRequest) -> Dict[str, str]
 </body>
 </html>"""
 
-    logging.info("Successfully generated rich HTML B2B Vendor List outreach draft for Estimator persona.")
+    logging.info("Successfully generated rich HTML B2B Vendor List outreach draft.")
 
     return {
         "status": "success",
-        "persona": "Estimator (Commercial Partner)",
-        "sendTo": "notifications@example.com",
+        "persona": os.getenv("LEAD_PERSONA_NAME", "Estimator (Commercial Flooring)"),
+        "sendTo": DEFAULT_NOTIFY_EMAIL,
         "subject": approval_subject,
         "outreach_subject": subject,
         "outreach_body": body,
@@ -267,18 +273,18 @@ async def generate_b2b_outreach_email(req: B2BOutreachRequest) -> Dict[str, str]
 
 
 class MobileReplyRequest(BaseModel):
-    reply_text: Optional[str] = Field("Approve", description="user's email reply body from phone")
+    reply_text: Optional[str] = Field("Approve", description="Operator's email reply body from phone")
     lead_id: Optional[str] = Field("", max_length=100, description="Lead ID from subject line")
-    company_name: Optional[str] = Field("Acme Commercial Builders", max_length=150, description="Target company")
-    client_name: Optional[str] = Field("John Doe", max_length=100, description="Target client name")
-    address: Optional[str] = Field("100 Market St, Suite 200, Metro City", max_length=200, description="Address")
-    target_email: Optional[str] = Field("partner@example.com", max_length=150, description="Target recipient email")
+    company_name: Optional[str] = Field(os.getenv("DEFAULT_TARGET_COMPANY", "Acme Commercial Builders"), max_length=150, description="Target company")
+    client_name: Optional[str] = Field(os.getenv("DEFAULT_TARGET_CLIENT", "John Doe"), max_length=100, description="Target client name")
+    address: Optional[str] = Field(os.getenv("DEFAULT_TARGET_ADDRESS", "100 Market St, Suite 200"), max_length=200, description="Address")
+    target_email: Optional[str] = Field(os.getenv("DEFAULT_TARGET_EMAIL", "partner@example.com"), max_length=150, description="Target recipient email")
 
 
 @router.post("/api/v1/intelligence/process-reply")
 async def process_mobile_reply_endpoint(req: MobileReplyRequest) -> Dict[str, Any]:
     """
-    Processes user's mobile reply in the field.
+    Processes operator's mobile reply in the field.
     Handles 'Approve'/'Send', custom edit instructions, or 'Reject'.
     """
     clean_reply = re.sub(r'[\r\n]', ' ', req.reply_text).strip().lower()
@@ -288,18 +294,20 @@ async def process_mobile_reply_endpoint(req: MobileReplyRequest) -> Dict[str, An
     address_safe = html.escape(req.address or "the local area")
     target_safe = html.escape(req.target_email or "client@example.com")
 
+    persona_title = os.getenv("LEAD_PERSONA_NAME", "Estimator | Commercial Partner")
+
     # 1. APPROVE / SEND
     if clean_reply in ("approve", "send", "approved", "lgtm", "yes"):
-        final_subject = f"Subcontractor Bid List: Commercial Flooring - Commercial Partner ({company_safe})"
+        final_subject = f"Subcontractor Bid List: Commercial Flooring ({company_safe})"
         final_body = (
             f"Hi {client_safe},\n\n"
-            f"I'm Estimator with Commercial Partner. Reaching out to see how we can get added to {company_safe}'s approved subcontractor / bid list for upcoming commercial flooring jobs in {address_safe}.\n\n"
+            f"I'm with the estimation team. Reaching out to see how we can get added to {company_safe}'s approved subcontractor / bid list for upcoming commercial flooring jobs in {address_safe}.\n\n"
             f"We handle commercial carpet, LVP, carpet tile, and hardwood installation across the area. Fully licensed, insured, and focused on executing project scopes on schedule with clear communication.\n\n"
-            f"Do you have a preferred vendor application form or estimator contact for bidding upcoming work? You can also check out our past projects at https://example.com.\n\n"
+            f"Do you have a preferred vendor application form or estimator contact for bidding upcoming work? You can also check out our past projects at {DEFAULT_WEBSITE}.\n\n"
             f"Best,\n\n"
-            f"Estimator | Commercial Partner\n"
-            f"Direct: (555) 019-2834\n"
-            f"https://example.com"
+            f"{persona_title}\n"
+            f"Direct: {DEFAULT_CONTACT_PHONE}\n"
+            f"{DEFAULT_WEBSITE}"
         )
         return {
             "status": "APPROVED",
@@ -307,7 +315,7 @@ async def process_mobile_reply_endpoint(req: MobileReplyRequest) -> Dict[str, An
             "target_email": target_safe,
             "final_subject": final_subject,
             "final_body": final_body,
-            "sendTo": "notifications@example.com",
+            "sendTo": DEFAULT_NOTIFY_EMAIL,
             "subject": f"[CONFIRMED] Outreach Approved: {company_safe}",
             "formatted_approval_email": f"<!DOCTYPE html><html><body style='font-family:sans-serif;padding:20px;background:#FAF8F5;'><div style='background:#FFF;padding:20px;border-radius:12px;border:1px solid #E7E5E4;'><h2 style='color:#166534;'>🟢 Outreach Email Approved</h2><p>Ready to dispatch to <strong>{target_safe}</strong>.</p><hr><pre style='background:#FAF8F5;padding:12px;border-radius:8px;'>{final_body}</pre></div></body></html>",
             "message": f"Outreach email approved! Ready to dispatch to {target_safe}."
@@ -318,7 +326,7 @@ async def process_mobile_reply_endpoint(req: MobileReplyRequest) -> Dict[str, An
         return {
             "status": "REJECTED",
             "action": "CANCEL_OUTREACH",
-            "sendTo": "notifications@example.com",
+            "sendTo": DEFAULT_NOTIFY_EMAIL,
             "subject": f"[CANCELED] Outreach Canceled: {company_safe}",
             "formatted_approval_email": f"<!DOCTYPE html><html><body style='font-family:sans-serif;padding:20px;background:#FAF8F5;'><div style='background:#FFF;padding:20px;border-radius:12px;border:1px solid #E7E5E4;'><h2 style='color:#991B1B;'>🔴 Outreach Canceled</h2><p>Outreach workflow for <strong>{company_safe}</strong> has been canceled.</p></div></body></html>",
             "message": f"Outreach for {company_safe} was canceled."
@@ -337,7 +345,7 @@ async def process_mobile_reply_endpoint(req: MobileReplyRequest) -> Dict[str, An
         return {
             "status": "REVISED",
             "action": "SEND_REVISED_PREVIEW",
-            "sendTo": "notifications@example.com",
+            "sendTo": DEFAULT_NOTIFY_EMAIL,
             "subject": f"[APPROVAL REQ #REVISED] {company_safe}",
             "formatted_approval_email": revised.get("formatted_approval_email"),
             "message": "Revised draft generated based on your mobile instructions."

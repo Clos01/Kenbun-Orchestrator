@@ -35,7 +35,7 @@ def save_to_hivemind(title: str, content: str, tags: str, category: str = "conce
 
 @sovereign_tool()
 def remember_preference(preference: str, context: str = "") -> str:
-    """Record one of the USER's (user's) preferences, decisions, or working style.
+    """Record one of the operator's preferences, decisions, or working style.
 
     Unlike save_to_hivemind (which models the system), this attributes the message
     to the human user peer so Honcho's deriver builds a personalized model of the

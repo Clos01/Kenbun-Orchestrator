@@ -37,51 +37,51 @@ from tools.strategy.kanban_tools import (
 
 SAMPLE_PERMIT_BATCH: List[Dict[str, Any]] = [
     {
-        "address": "100 Grandview Way, Suite 100, Metro 10001",
+        "address": "100 Grandview Way, Suite 100, Metro, NY 10001",
         "contractor_name": "Grandview Custom Homes LLC",
         "permit_type": "New Single Family Dwelling",
         "valuation": 1450000.0,
         "total_sqft": 5200.0,
         "description": "New custom luxury residential construction, 2-story with finished basement, open floor plan, framing stage",
         "phone": "919-555-0144",
-        "city": "Cary",
-        "county": "Wake",
+        "city": "North Metro",
+        "county": "Metro County",
         "issue_date": "2026-08-14"
     },
     {
-        "address": "200 Commerce Blvd, Suite 200, Metro 10002",
+        "address": "200 Commerce Blvd, Suite 200, Metro, NY 10002",
         "contractor_name": "Apex Commercial Builders Inc",
         "permit_type": "Commercial Interior Alteration",
         "valuation": 280000.0,
         "total_sqft": 3400.0,
         "description": "Commercial tenant upfit for new boutique dental clinic and medical consultation suites, self-leveling required",
         "phone": "919-555-0288",
-        "city": "Raleigh",
-        "county": "Wake",
+        "city": "Central Metro",
+        "county": "Metro County",
         "issue_date": "2026-08-22"
     },
     {
-        "address": "300 Heritage Dr, Metro 10003",
+        "address": "300 Heritage Dr, Metro, NY 10003",
         "contractor_name": "Atelier Modern Interior Design & Architecture",
         "permit_type": "Residential Alteration / Addition",
         "valuation": 420000.0,
         "total_sqft": 2800.0,
         "description": "High-end bespoke interior architecture remodel, custom French oak specification, luxury bathroom and kitchen expansion",
         "phone": "",  # Unlisted phone test case
-        "city": "Wake Forest",
-        "county": "Wake",
+        "city": "East Metro",
+        "county": "Metro County",
         "issue_date": "2026-08-30"
     },
     {
-        "address": "400 Downtown Ave, Metro 10004",
+        "address": "400 Downtown Ave, Metro, NY 10004",
         "contractor_name": "Tarheel Capital Properties LLC",
         "permit_type": "Residential Alteration",
         "valuation": 65000.0,
         "total_sqft": 1650.0,
         "description": "Turnkey rehab and flip of 1960s ranch, structural repair and full interior cosmetic renovation for quick resale",
         "phone": "919-555-0812",
-        "city": "Raleigh",
-        "county": "Wake",
+        "city": "Central Metro",
+        "county": "Metro County",
         "issue_date": "2026-09-02"
     }
 ]

@@ -25,11 +25,11 @@ KNOWLEDGE_BASE = {
     "flooring": {
         "title": "Flooring Contractor Permit Radar (Lead Pipeline)",
         "metaphor": "Imagine 9 different town halls where people submit paperwork to redo their floors. Instead of hiring someone to drive to each town hall every morning, our software sends an automated mail carrier to read the public records, grab all the flooring projects, and pin them on a live radar map for our sales team.",
-        "box1": "Public Town Hall Open Data (ArcGIS APIs for Municipal Open Data Portals)",
+        "box1": "Public Town Hall Open Data (Municipal Open Data Portals)",
         "box2": "Python Ingestion Engine (Extracts homeowner address, square footage, valuation, contractor)",
         "box3": "PostgreSQL Vault & Live Interactive Map (6,000+ pins with dynamic town dropdown)",
         "elevator": [
-            "We pull public building permits from city databases across North Carolina every night.",
+            "We pull public building permits from municipal databases every night.",
             "Our engine filters out irrelevant projects and only keeps high-value flooring and renovation jobs.",
             "The leads appear instantly on an interactive map, giving our estimators first-mover advantage before competitors even know the job exists."
         ],

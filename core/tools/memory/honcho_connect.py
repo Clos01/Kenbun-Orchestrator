@@ -127,11 +127,11 @@ _CHROMA_HTTP_COOLDOWN_S = 60.0
 
 # The system self-model peer vs. the human user peer. Previously everything was
 # attributed to the system peer, so Honcho never built a model of the user. The
-# user peer lets the deriver learn user's preferences/decisions over time.
+# user peer lets the deriver learn the operator's preferences/decisions over time.
 def _system_peer() -> str:
     return f"system_{settings.PROJECT_NAME}"
 
-USER_PEER = os.getenv("KENBUN_USER_PEER", "user")
+USER_PEER = os.getenv("KENBUN_USER_PEER", "operator")
 
 
 def get_honcho_client():

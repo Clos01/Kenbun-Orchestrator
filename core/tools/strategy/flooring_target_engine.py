@@ -263,7 +263,7 @@ class FlooringTargetEngine:
         cls,
         lead: FlooringLeadInput,
         company_name: str = "PlankMap Partner",
-        rep_name: str = "user"
+        rep_name: str = "Estimator"
     ) -> TargetedFlooringLead:
         """Classifies a lead into one of the 4 personas using multi-factor heuristics."""
         text_corpus = f"{lead.description} {lead.permit_type} {lead.contractor_name}".lower()
