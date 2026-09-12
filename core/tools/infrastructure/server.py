@@ -32,6 +32,7 @@ LOG_FILE = PROJECT_ROOT / "mcp_debug.log"
 from tools.audit.supervisor_tools import *
 from tools.design.design_tools import *
 from tools.execution.checkpoint_tools import *
+from tools.execution.oom_safe_harness import *
 from tools.infrastructure.workspace_tools import *
 from tools.memory.hivemind_tools import *
 from tools.strategy.orchestration_tools import *

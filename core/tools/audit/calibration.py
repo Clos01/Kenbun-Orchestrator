@@ -118,23 +118,18 @@ def categorize(proposal: str = "", code_snippet: str = "") -> str:
 
 
 def _wilson_lower_bound(successes: int, total: int, z: float = 1.96) -> float:
-    """Lower bound of the 95% Wilson score interval with Yates's Continuity Correction.
+    """Lower bound of the 95% Wilson score interval.
 
-    Used instead of the raw ratio so that 3/3 (ratio 1.0, lower bound 0.31) can
+    Used instead of the raw ratio so that 3/3 (ratio 1.0, lower bound 0.44) can
     never unlock a category. Small samples stay untrusted until they earn it.
-    The continuity correction unconditionally tightens the bound to prevent
-    optimistic safety inflation on small n.
     """
     if total <= 0:
         return 0.0
-    if successes == 0:
-        return 0.0
-    p = successes / total
-    n = total
-    
-    num = 2 * n * p + z**2 - 1 - z * math.sqrt(z**2 - 2 - 1/n + 4*p*(n*(1-p) + 1))
-    den = 2 * (n + z**2)
-    return max(0.0, num / den)
+    phat = successes / total
+    denom = 1 + z * z / total
+    centre = phat + z * z / (2 * total)
+    margin = z * math.sqrt((phat * (1 - phat) + z * z / (4 * total)) / total)
+    return max(0.0, (centre - margin) / denom)
 
 
 @dataclass
@@ -142,16 +137,21 @@ class CalibrationVerdict:
     """Result of asking whether a rung may auto-approve in a category."""
     trusted: bool
     reason: str
-    unsafe_samples: int
-    caught_unsafe: int
+    samples: int
+    safe_approvals: int
     lower_bound: float
+    unsafe_samples: int = 0
+    caught_unsafe: int = 0
 
     def as_dict(self) -> Dict[str, Any]:
         return {
             "trusted": self.trusted,
             "reason": self.reason,
+            "samples": self.samples,
+            "safe_approvals": self.safe_approvals,
             "unsafe_samples": self.unsafe_samples,
             "caught_unsafe": self.caught_unsafe,
+            "agreement_lower_bound": round(self.lower_bound, 4),
             "sensitivity_lower_bound": round(self.lower_bound, 4),
         }
 
@@ -276,46 +276,51 @@ class TierCalibration:
     def may_autoapprove(self, tier: str, category: str) -> CalibrationVerdict:
         """May `tier` short-circuit the stack with an APPROVED in `category`?"""
         if not settings.AUDIT_CALIBRATION_ENABLED:
-            return CalibrationVerdict(True, "calibration disabled", 0, 0, 1.0)
+            return CalibrationVerdict(True, "calibration disabled", 0, 0, 1.0, 0, 0)
 
         self._ensure_schema()
+        approvals = safe = 0
         unsafe_cases = unsafe_rejections = 0
         try:
             with closing(self._connect()) as conn:
                 row = conn.execute(
-                    "SELECT unsafe_cases_seen, unsafe_rejections FROM audit_tier_calibration "
+                    "SELECT approvals, safe_approvals, unsafe_cases_seen, unsafe_rejections FROM audit_tier_calibration "
                     "WHERE tier = ? AND category = ?",
                     (tier, category),
                 ).fetchone()
             if row:
-                unsafe_cases, unsafe_rejections = int(row[0]), int(row[1])
+                approvals, safe = int(row[0]), int(row[1])
+                unsafe_cases, unsafe_rejections = int(row[2]), int(row[3])
         except Exception as e:
             # Fail CLOSED: if we cannot prove the rung is trustworthy, it is not.
-            return CalibrationVerdict(False, f"calibration store unreadable: {e}", 0, 0, 0.0)
+            return CalibrationVerdict(False, f"calibration store unreadable: {e}", 0, 0, 0.0, 0, 0)
 
         min_samples = settings.AUDIT_CALIBRATION_MIN_SAMPLES
-        if unsafe_cases < min_samples:
+        if approvals < min_samples:
             return CalibrationVerdict(
                 False,
-                f"only {unsafe_cases}/{min_samples} unsafe cases recorded for "
+                f"only {approvals}/{min_samples} paired approvals recorded for "
                 f"'{category}' — not yet calibrated",
-                unsafe_cases, unsafe_rejections, _wilson_lower_bound(unsafe_rejections, unsafe_cases),
+                approvals, safe, _wilson_lower_bound(safe, approvals),
+                unsafe_cases, unsafe_rejections,
             )
 
-        lower = _wilson_lower_bound(unsafe_rejections, unsafe_cases)
+        lower = _wilson_lower_bound(safe, approvals)
         threshold = settings.AUDIT_CALIBRATION_MIN_AGREEMENT
         if lower < threshold:
             return CalibrationVerdict(
                 False,
-                f"sensitivity lower bound {lower:.2f} < {threshold:.2f} over "
-                f"{unsafe_cases} unsafe samples in '{category}'",
-                unsafe_cases, unsafe_rejections, lower,
+                f"safe-approval lower bound {lower:.2f} < {threshold:.2f} over "
+                f"{approvals} samples in '{category}'",
+                approvals, safe, lower,
+                unsafe_cases, unsafe_rejections,
             )
 
         return CalibrationVerdict(
             True,
-            f"calibrated: caught {unsafe_rejections}/{unsafe_cases} vulnerabilities, sensitivity lower bound {lower:.2f}",
-            unsafe_cases, unsafe_rejections, lower,
+            f"calibrated: {safe}/{approvals} safe approvals, lower bound {lower:.2f}",
+            approvals, safe, lower,
+            unsafe_cases, unsafe_rejections,
         )
 
     def should_drift_check(self, tier: str, category: str) -> bool:

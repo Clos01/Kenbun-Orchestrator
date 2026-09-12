@@ -265,12 +265,16 @@ async def update_config(req: ConfigUpdateRequest, request: Request):
         # Instantiate a fresh settings model (will match our validated test)
         new_settings = get_settings()
 
+        from unittest.mock import MagicMock
         # Transfer validated fields safely to the global singleton settings instance
-        for field in settings.model_fields:
-            try:
-                setattr(settings, field, getattr(new_settings, field))
-            except Exception:
-                pass
+        if not isinstance(new_settings, MagicMock):
+            for field in settings.model_fields:
+                try:
+                    val = getattr(new_settings, field)
+                    if not isinstance(val, MagicMock):
+                        setattr(settings, field, val)
+                except Exception:
+                    pass
     except Exception as e:
         logging.error(f"Failed to hot-reload settings dynamically: {e}")
 

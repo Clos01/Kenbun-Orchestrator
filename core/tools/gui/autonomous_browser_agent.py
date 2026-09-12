@@ -446,7 +446,7 @@ def dispatch_autonomous_browser(
     - 'ui_tars' / 'Edge_Node': Full vision-native UI-TARS Closed-Loop execution on the remote Edge_Node GPU satellite (DISPLAY=:0).
     
     Args:
-        url: Target web URL (e.g. 'https://enterpriseapp.ai').
+        url: Target web URL (e.g. 'https://example.com').
         goal: High-level directive (e.g. 'Open Enterprise AI and extract pricing/features').
         mode: Execution engine ('hybrid', 'playwright', 'ui_tars').
         actions: Optional list of click/type actions [{'type': 'click', 'selector': '#btn'}].

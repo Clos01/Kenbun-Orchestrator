@@ -3,8 +3,8 @@
 # Kenbun Autonomous Browser CLI
 # Usage:
 #   bin/kenbun-browse https://bids.contractorsplanroom.com/secure/ --mode ui_tars
-#   bin/kenbun-browse https://enterpriseapp.ai --mode playwright
-#   bin/kenbun-browse https://enterpriseapp.ai --mode hybrid --goal "Extract pricing"
+#   bin/kenbun-browse https://example.com --mode playwright
+#   bin/kenbun-browse https://example.com --mode hybrid --goal "Extract pricing"
 #
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,7 +29,7 @@ if [ -z "$1" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     echo ""
     echo "Examples:"
     echo "  bin/kenbun-browse https://bids.contractorsplanroom.com/secure/ --mode ui_tars"
-    echo "  bin/kenbun-browse https://enterpriseapp.ai --mode playwright"
+    echo "  bin/kenbun-browse https://example.com --mode playwright"
     exit 0
 fi
 

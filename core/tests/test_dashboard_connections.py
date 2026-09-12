@@ -150,8 +150,7 @@ def mock_external_services():
     if not chroma_live:
         patches.append(patch("tools.infrastructure.routers.intelligence.get_project_collection", mock_get_collection))
         patches.append(patch("tools.infrastructure.routers.telemetry.get_project_collection", mock_get_collection))
-    if not planka_live:
-        patches.append(patch("tools.infrastructure.routers.planka._planka_request", mock_planka_request))
+    patches.append(patch("tools.infrastructure.routers.planka._planka_request", mock_planka_request))
 
     patches.append(patch("tools.utils.llm_router.call_llm_gateway", mock_call_llm_gateway))
     patches.append(patch("tools.infrastructure.routers.swarm.orchestrate", mock_orchestrate))

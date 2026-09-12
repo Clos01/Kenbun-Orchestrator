@@ -15,7 +15,7 @@ class TestAutonomousBrowserAgent(unittest.TestCase):
         mock_result = {
             "status": "SUCCESS",
             "engine_used": "playwright",
-            "target_url": "https://enterpriseapp.ai",
+            "target_url": "https://example.com",
             "page_title": "Enterprise AI",
             "extracted_data": {"title": "Enterprise AI", "links_count": 12},
             "screenshot_path": "/path/to/shot.png",
@@ -24,7 +24,7 @@ class TestAutonomousBrowserAgent(unittest.TestCase):
 
         with patch.object(self.agent, "execute_playwright", return_value=mock_result):
             res = self.agent.run(
-                url="https://enterpriseapp.ai",
+                url="https://example.com",
                 goal="Extract stats",
                 mode="playwright",
                 session_id="test_sess_01"
@@ -52,7 +52,7 @@ class TestAutonomousBrowserAgent(unittest.TestCase):
         with patch.object(self.agent, "execute_playwright", return_value=blocked_pw):
             with patch.object(self.agent, "execute_p330_ssh_tars", return_value=tars_success):
                 res = self.agent.execute_hybrid(
-                    url="https://enterpriseapp.ai",
+                    url="https://example.com",
                     goal="Bypass blocker and open dashboard",
                     session_id="hybrid_sess"
                 )
@@ -67,12 +67,12 @@ class TestAutonomousBrowserAgent(unittest.TestCase):
             "status": "SUCCESS",
             "engine_used": "playwright",
             "page_title": "Enterprise AI",
-            "target_url": "https://enterpriseapp.ai"
+            "target_url": "https://example.com"
         }
 
         with patch("tools.gui.autonomous_browser_agent.AutonomousBrowserAgent.run", return_value=mock_output):
             raw_json = trigger_ui_tars({
-                "url": "https://enterpriseapp.ai",
+                "url": "https://example.com",
                 "mode": "playwright",
                 "goal": "Verify active AI services"
             })
@@ -84,7 +84,7 @@ class TestAutonomousBrowserAgent(unittest.TestCase):
         """Verify the sovereign tool function dispatches correctly."""
         mock_output = {"status": "SUCCESS", "engine_used": "hybrid"}
         with patch("tools.gui.autonomous_browser_agent.AutonomousBrowserAgent.run", return_value=mock_output):
-            res = dispatch_autonomous_browser(url="https://enterpriseapp.ai", mode="hybrid")
+            res = dispatch_autonomous_browser(url="https://example.com", mode="hybrid")
             self.assertEqual(res["status"], "SUCCESS")
 
 

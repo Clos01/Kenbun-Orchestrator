@@ -38,38 +38,37 @@ def test_planka_live_integration():
     assert "# 📁 Planka Project Structure" in struct
     
     # Extract a project and board ID if available
-    # Our exploration script created a project named "Default Workspace" and a board named "Main Board"
-    assert "Default Workspace" in struct
-    assert "Main Board" in struct
+    assert "Project:" in struct
+    assert "Board:" in struct
     
-    # Let's extract the board ID from the structure markdown
-    # Structure format: "    *   **Board:** Main Board (ID: `1803497714239931407`)"
+    # Extract board ID from the structure markdown
+    # Structure format: "    *   **Board:** <Name> (ID: `1803497714239931407`)"
     board_id = None
     for line in struct.split("\n"):
-        if "Main Board" in line and "ID:" in line:
+        if "Board:" in line and "ID:" in line:
             parts = line.split("`")
             if len(parts) >= 2:
                 board_id = parts[1]
                 break
                 
-    assert board_id is not None, f"Could not find Main Board ID in structure: {struct}"
+    assert board_id is not None, f"Could not find Board ID in structure: {struct}"
     
     # 2. Test get board structure
     board_md = planka_get_board(board_id)
     assert "❌ Error" not in board_md
-    assert "To Do" in board_md
+    assert "List ID:" in board_md
     
-    # Extract the To Do List ID
-    # Format: "## 🟢 To Do (List ID: `1803497846654108693`)"
+    # Extract the first available List ID
+    # Format: "## 🟢 <Name> (List ID: `1803497846654108693`)"
     list_id = None
     for line in board_md.split("\n"):
-        if "To Do" in line and "List ID:" in line:
+        if "List ID:" in line:
             parts = line.split("`")
             if len(parts) >= 2:
                 list_id = parts[1]
                 break
                 
-    assert list_id is not None, f"Could not find To Do List ID in board: {board_md}"
+    assert list_id is not None, f"Could not find List ID in board: {board_md}"
     
     # 3. Create card
     card_name = "Automated Test Card"

@@ -177,7 +177,7 @@ class TestEdgeCases:
         
         # Verify query was correct
         mock_cursor.execute.assert_called_with(
-            "SELECT alpha, beta, success_count, failure_count FROM bayesian_weights WHERE tool_id = %s AND category = %s",
+            "SELECT alpha, beta, success_count, failure_count, last_updated FROM bayesian_weights WHERE tool_id = %s AND category = %s",
             ("mock_tool", "global")
         )
         
@@ -352,9 +352,9 @@ class TestEdgeCases:
         # Overwrite BRAIN_HEALTH_DIR settings to a temp path
         monkeypatch.setattr(settings, "BRAIN_HEALTH_DIR", tmp_path)
         
-        # Manually create the lock file to simulate contention
         from tools.utils import chat_history_manager
         lock_file = tmp_path / "chat_sessions.lock"
+        monkeypatch.setattr(chat_history_manager, "LOCK_FILE", lock_file)
         lock_file.write_text("locked by process 1234")
         
         # Call load_sessions with a short timeout to prevent long test wait

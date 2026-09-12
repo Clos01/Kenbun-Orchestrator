@@ -69,16 +69,16 @@ def _recency_factor(last_updated, half_life_hours=None):
 
 
 def _decayed_weights(success_count, failure_count, last_updated):
-    """Recency-weighted Beta(1 + s', 1 + f') params derived from raw event counts.
+    """Recency-weighted Beta(STABLE_PRIOR + s', STABLE_PRIOR + f') params derived from raw event counts.
 
     Uses the true success/failure counts as ground truth (rather than the stored
     alpha/beta, whose prior base has drifted across code paths) and shrinks them
-    toward the uniform prior as they age.
+    toward the stable prior as they age.
     """
     factor = _recency_factor(last_updated)
     s = max(0.0, float(success_count or 0)) * factor
     f = max(0.0, float(failure_count or 0)) * factor
-    return 1.0 + s, 1.0 + f
+    return STABLE_PRIOR + s, STABLE_PRIOR + f
 
 class PulseStatus(str, Enum):
     STABLE = "STABLE"
@@ -313,14 +313,12 @@ class BayesianGovernor:
                     cursor.execute("SELECT alpha, beta, success_count, failure_count, timestamp FROM intelligence WHERE tool_id = ? AND category = ?", (tool_id, category))
                     row = cursor.fetchone()
                     if row:
-                        a, b = _decayed_weights(row[2], row[3], row[4])
-                        return a, b, int(row[2]), int(row[3])
+                        return float(row[0]), float(row[1]), int(row[2]), int(row[3])
                     elif category != 'global':
                         cursor.execute("SELECT alpha, beta, success_count, failure_count, timestamp FROM intelligence WHERE tool_id = ? AND category = 'global'", (tool_id,))
                         row = cursor.fetchone()
                         if row:
-                            a, b = _decayed_weights(row[2], row[3], row[4])
-                            return a, b, int(row[2]), int(row[3])
+                            return float(row[0]), float(row[1]), int(row[2]), int(row[3])
             except Exception as e:
                 print(f"Debug: Error getting local stats for {tool_id} ({category}): {e}")
             return 2.0, 2.0, 0, 0
@@ -332,14 +330,12 @@ class BayesianGovernor:
                     cur.execute("SELECT alpha, beta, success_count, failure_count, last_updated FROM bayesian_weights WHERE tool_id = %s AND category = %s", (tool_id, category))
                     row = cur.fetchone()
                     if row:
-                        a, b = _decayed_weights(row["success_count"], row["failure_count"], row["last_updated"])
-                        return a, b, int(row["success_count"]), int(row["failure_count"])
+                        return float(row.get("alpha", 2.0)), float(row.get("beta", 2.0)), int(row.get("success_count", 0)), int(row.get("failure_count", 0))
                     elif category != 'global':
                         cur.execute("SELECT alpha, beta, success_count, failure_count, last_updated FROM bayesian_weights WHERE tool_id = %s AND category = 'global'", (tool_id,))
                         row = cur.fetchone()
                         if row:
-                            a, b = _decayed_weights(row["success_count"], row["failure_count"], row["last_updated"])
-                            return a, b, int(row["success_count"]), int(row["failure_count"])
+                            return float(row.get("alpha", 2.0)), float(row.get("beta", 2.0)), int(row.get("success_count", 0)), int(row.get("failure_count", 0))
         except Exception as e:
             print(f"Debug: Error getting remote stats for {tool_id} ({category}): {e}")
             # Fallback to local SQLite if remote query fails
@@ -501,7 +497,10 @@ class BayesianGovernor:
                     rows = cursor.fetchall()
                     for row in rows:
                         t_id, cat, alpha, beta, s, f, ts = row
-                        d_alpha, d_beta = _decayed_weights(s, f, ts)
+                        if s == 0 and f == 0:
+                            d_alpha, d_beta = float(alpha), float(beta)
+                        else:
+                            d_alpha, d_beta = _decayed_weights(s, f, ts)
                         results.append({
                             "tool_id": t_id,
                             "category": cat or "General",
@@ -584,12 +583,13 @@ class BayesianGovernor:
         if not tools:
             return None, 0.0
 
-        try:
-            from tools.utils.bayesian import rank_tools_thompson
-            ranked = rank_tools_thompson(category, tools, exploration_mode=True)
-            return ranked[0]
-        except Exception as e:
-            print(f"⚠️ [THOMPSON] Canonical sampler unavailable ({e}); using governor-local weights.")
+        if not self.use_local:
+            try:
+                from tools.utils.bayesian import rank_tools_thompson
+                ranked = rank_tools_thompson(category, tools, exploration_mode=True)
+                return ranked[0]
+            except Exception as e:
+                print(f"⚠️ [THOMPSON] Canonical sampler unavailable ({e}); using governor-local weights.")
 
         best_score = -1
         best_tool = None

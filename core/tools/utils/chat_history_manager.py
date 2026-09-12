@@ -19,13 +19,19 @@ def get_sessions_file_path() -> Path:
     settings.BRAIN_HEALTH_DIR.mkdir(parents=True, exist_ok=True)
     return settings.BRAIN_HEALTH_DIR / "chat_sessions.json"
 
+def _get_lock_file() -> Path:
+    if LOCK_FILE.parent != settings.BRAIN_HEALTH_DIR:
+        return settings.BRAIN_HEALTH_DIR / "chat_sessions.lock"
+    return LOCK_FILE
+
 def _acquire_lock(timeout: float = 3.0) -> bool:
     """Acquires an exclusive lock using a lockfile to prevent race conditions."""
     start_time = time.time()
+    lock_path = _get_lock_file()
     while time.time() - start_time < timeout:
         try:
             # Attempt to create the lock file exclusively
-            fd = os.open(str(LOCK_FILE), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
             os.close(fd)
             return True
         except FileExistsError:
@@ -37,8 +43,9 @@ def _acquire_lock(timeout: float = 3.0) -> bool:
 def _release_lock():
     """Releases the lock by removing the lockfile."""
     try:
-        if LOCK_FILE.exists():
-            LOCK_FILE.unlink()
+        lock_path = _get_lock_file()
+        if lock_path.exists():
+            lock_path.unlink()
     except Exception as e:
         logger.error(f"Error releasing chat lock: {e}")
 

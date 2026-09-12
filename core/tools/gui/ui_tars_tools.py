@@ -48,8 +48,8 @@ def trigger_ui_tars(goal: Union[str, Dict[str, Any]]) -> str:
     Motor-Cortex UI-TARS Autonomous Visual Executor with Multi-Engine Routing (Playwright + Edge_Node Satellite).
     
     Supports:
-    1. Direct English directive: 'Open Firefox and navigate to https://enterpriseapp.ai'
-    2. Structured AI JSON payload: {'url': 'https://enterpriseapp.ai', 'mode': 'hybrid', 'goal': '...'}
+    1. Direct English directive: 'Open Firefox and navigate to https://example.com'
+    2. Structured AI JSON payload: {'url': 'https://example.com', 'mode': 'hybrid', 'goal': '...'}
     """
     if isinstance(goal, dict):
         url = goal.get("url", "")

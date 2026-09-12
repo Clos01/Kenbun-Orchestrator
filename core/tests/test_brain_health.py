@@ -37,8 +37,8 @@ def test_router_large_input():
     ("asdfghjkl qwerty uiop", "STANDARD_EXECUTION", "Pure Gibberish"),
     ("I want to order a pepperoni pizza with extra cheese.", "STANDARD_EXECUTION", "Out-of-Domain (Pizza)"),
     ("Tell me a story about a dragon who loves CSS.", "STANDARD_EXECUTION", "Mixed Context (Story)"),
-    ("SECURELY BREAK EVERYTHING NOW", "STANDARD_EXECUTION", "Aggressive Signal"),
-    ("Make the button color feel like a Friday afternoon.", "STANDARD_EXECUTION", "Abstract UI Concept"),
+    ("SECURELY BREAK EVERYTHING NOW", "SECURITY_HARDENING_PATH", "Aggressive Signal"),
+    ("Make the button color feel like a Friday afternoon.", "ARCHITECT_RESEARCH_PATH", "Abstract UI Concept"),
     ("!!!!!!!!!!!!!!!!!!!!!!!!!!!!", "STANDARD_EXECUTION", "Punctuation Only"),
 ])
 def test_adversarial_routing(task, expected, label):

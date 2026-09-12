@@ -1,4 +1,6 @@
 import ast
+import sys
+import shutil
 import subprocess
 from pathlib import Path
 from tools.utils.backtracker import save_checkpoint, restore_checkpoint
@@ -85,9 +87,14 @@ def autofix_linter(file_path: str, project_path: str = ".") -> str:
             if not _verify_python_ast(target_file):
                 return f"⚠️ Skipped: Python file '{target_file.name}' has active syntax errors. Auto-fix bypassed to prevent corruption."
             
+            py_bin = Path(sys.executable).parent
+            autoflake_cmd = shutil.which("autoflake") or str(py_bin / "autoflake")
+            isort_cmd = shutil.which("isort") or str(py_bin / "isort")
+            black_cmd = shutil.which("black") or str(py_bin / "black")
+
             # Running Step 3.1: Autofake (strips unused variables and imports)
             res_autofake = subprocess.run(
-                ["autoflake", "--remove-all-unused-imports", "--remove-unused-variables", "--in-place", str(target_file)],
+                [autoflake_cmd, "--remove-all-unused-imports", "--remove-unused-variables", "--in-place", str(target_file)],
                 shell=False, capture_output=True, text=True
             )
             stdout_logs.append(res_autofake.stdout)
@@ -96,7 +103,7 @@ def autofix_linter(file_path: str, project_path: str = ".") -> str:
             
             # Running Step 3.2: Isort (sorts imports)
             res_isort = subprocess.run(
-                ["isort", str(target_file)],
+                [isort_cmd, str(target_file)],
                 shell=False, capture_output=True, text=True
             )
             stdout_logs.append(res_isort.stdout)
@@ -105,7 +112,7 @@ def autofix_linter(file_path: str, project_path: str = ".") -> str:
 
             # Running Step 3.3: Black (formats code)
             res_black = subprocess.run(
-                ["black", str(target_file)],
+                [black_cmd, str(target_file)],
                 shell=False, capture_output=True, text=True
             )
             stdout_logs.append(res_black.stdout)

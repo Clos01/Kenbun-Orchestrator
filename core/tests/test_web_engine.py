@@ -138,7 +138,7 @@ def test_ddgs_search_scraping(mock_get):
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.text = """
-    <div class="result body">
+    <div class="result results_links results_links_deep web-result">
         <a class="result__a" href="https://example.com/target">Title of Result</a>
         <a class="result__snippet">This is the excerpt snippet.</a>
     </div>

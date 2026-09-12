@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import os
 import sys
 import subprocess
@@ -6,7 +7,15 @@ import subprocess
 BOLD = "\033[1m"
 GREEN = "\033[32m"
 CYAN = "\033[36m"
+YELLOW = "\033[33m"
+RED = "\033[31m"
 RESET = "\033[0m"
+
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+core_dir = os.path.join(repo_root, "core")
+if core_dir not in sys.path:
+    sys.path.insert(0, core_dir)
+
 
 def run_harness(target_path):
     bin_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,8 +34,138 @@ def run_harness(target_path):
     if os.path.isfile(target_path) and os.path.exists(code_clarity):
         subprocess.run([code_clarity, target_path])
 
+
+def cli_search(args):
+    if not args:
+        print(f"{RED}Usage: bin/kenbun-harness search <query> [path] [--includes=*.py]{RESET}")
+        sys.exit(1)
+    query = args[0]
+    path = args[1] if len(args) > 1 and not args[1].startswith("--") else ""
+    includes = None
+    for a in args:
+        if a.startswith("--includes="):
+            includes = a.split("=", 1)[1]
+
+    from tools.execution.oom_safe_harness import ripgrep_search
+    raw = ripgrep_search(query=query, search_path=path, includes=includes)
+    data = json.loads(raw)
+    if "error" in data:
+        print(f"{RED}Error: {data['error']}{RESET}")
+        return
+
+    print(f"\n{BOLD}{CYAN}🔍 Search Results [{data.get('engine', 'unknown')}]{RESET}: '{query}' ({data.get('count', 0)} matches)")
+    for res in data.get("results", []):
+        print(f"  {GREEN}{res['file']}{RESET}:{YELLOW}{res['line']}{RESET}  {res['content']}")
+    if data.get("capped"):
+        print(f"  {YELLOW}⚠️  Results capped at {len(data['results'])} matches to protect memory.{RESET}")
+    print()
+
+
+def cli_view(args):
+    if not args:
+        print(f"{RED}Usage: bin/kenbun-harness view <file_path> [start_line] [end_line] [--symbols]{RESET}")
+        sys.exit(1)
+    file_path = args[0]
+    start_line = 1
+    end_line = None
+    symbols_only = "--symbols" in args
+
+    pos_args = [a for a in args[1:] if not a.startswith("--")]
+    if len(pos_args) >= 1:
+        try:
+            start_line = int(pos_args[0])
+        except ValueError:
+            pass
+    if len(pos_args) >= 2:
+        try:
+            end_line = int(pos_args[1])
+        except ValueError:
+            pass
+
+    from tools.execution.oom_safe_harness import view_file
+    output = view_file(file_path=file_path, start_line=start_line, end_line=end_line, symbols_only=symbols_only)
+    print(output)
+
+
+def cli_task(args):
+    if not args:
+        print(f"{RED}Usage: bin/kenbun-harness task [spawn|status|logs|kill|list] ...{RESET}")
+        sys.exit(1)
+    sub = args[0]
+
+    from tools.execution.oom_safe_harness import (
+        spawn_background_task,
+        get_background_task_status,
+        kill_background_task,
+        list_background_tasks,
+    )
+
+    if sub == "spawn":
+        if len(args) < 2:
+            print(f"{RED}Usage: bin/kenbun-harness task spawn \"<command>\"{RESET}")
+            sys.exit(1)
+        cmd = " ".join(args[1:])
+        res = json.loads(spawn_background_task(command=cmd))
+        print(f"{GREEN}✓ Task Spawned:{RESET} ID={BOLD}{res.get('task_id')}{RESET} (PID={res.get('pid')})")
+        print(f"  Log File: {res.get('log_path')}")
+    elif sub == "status":
+        if len(args) < 2:
+            print(f"{RED}Usage: bin/kenbun-harness task status <task_id>{RESET}")
+            sys.exit(1)
+        res = json.loads(get_background_task_status(task_id=args[1]))
+        status_color = GREEN if res.get("status") == "COMPLETED" else (YELLOW if res.get("status") == "RUNNING" else RED)
+        print(f"\nTask: {BOLD}{res.get('task_id')}{RESET}")
+        print(f"Status: {status_color}{res.get('status')}{RESET} | PID: {res.get('pid')} | Duration: {res.get('duration_seconds')}s")
+        print(f"Command: {res.get('command')}")
+        print(f"\n{BOLD}Log Tail (last {len(res.get('log_tail', []))} lines):{RESET}")
+        for line in res.get("log_tail", []):
+            print(f"  {line}")
+        print()
+    elif sub == "logs":
+        if len(args) < 2:
+            print(f"{RED}Usage: bin/kenbun-harness task logs <task_id> [tail_lines]{RESET}")
+            sys.exit(1)
+        tail = int(args[2]) if len(args) > 2 else 50
+        res = json.loads(get_background_task_status(task_id=args[1], tail_lines=tail))
+        for line in res.get("log_tail", []):
+            print(line)
+    elif sub == "kill":
+        if len(args) < 2:
+            print(f"{RED}Usage: bin/kenbun-harness task kill <task_id>{RESET}")
+            sys.exit(1)
+        res = json.loads(kill_background_task(task_id=args[1]))
+        print(f"{YELLOW}Task Kill Result:{RESET} {res}")
+    elif sub == "list":
+        res = json.loads(list_background_tasks(limit=10))
+        print(f"\n{BOLD}Recent Background Tasks ({res.get('total', 0)}):{RESET}")
+        for t in res.get("tasks", []):
+            sc = GREEN if t.get("status") == "COMPLETED" else (YELLOW if t.get("status") == "RUNNING" else RED)
+            print(f"  {BOLD}{t.get('task_id')}{RESET} [{sc}{t.get('status')}{RESET}] PID={t.get('pid')}  {t.get('command')}")
+        print()
+    else:
+        print(f"{RED}Unknown task command: {sub}{RESET}")
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: bin/kenbun-harness <filepath_or_project_dir>")
+        print(f"{BOLD}Kenbun Autonomous Harness & Inspection Subsystem{RESET}")
+        print("Usage:")
+        print("  bin/kenbun-harness <filepath_or_project_dir>     (run code clarity & backend verifier)")
+        print("  bin/kenbun-harness search <query> [path]         (host-level fast ripgrep search)")
+        print("  bin/kenbun-harness view <file> [start] [end]     (surgical sliding-window code reader)")
+        print("  bin/kenbun-harness task spawn \"<command>\"        (run detached background job)")
+        print("  bin/kenbun-harness task status <task_id>         (check job status and tail log)")
+        print("  bin/kenbun-harness task list                     (list recent background tasks)")
+        print("  bin/kenbun-harness task kill <task_id>           (kill background job)")
         sys.exit(1)
-    run_harness(sys.argv[1])
+
+    cmd = sys.argv[1]
+    if cmd == "search":
+        cli_search(sys.argv[2:])
+    elif cmd == "view":
+        cli_view(sys.argv[2:])
+    elif cmd == "task":
+        cli_task(sys.argv[2:])
+    else:
+        run_harness(cmd)
+

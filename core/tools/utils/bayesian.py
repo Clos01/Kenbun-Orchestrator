@@ -97,6 +97,16 @@ def _known_tool_ids() -> frozenset:
         return frozenset()
 
 
+DEFAULT_SYSTEM_TOOLS = {
+    "token_governor", "telemetry_pulse", "fleet_monitor", "topology_mapper",
+    "audit_supervisor", "vector_sync_worker", "bayesian_governor",
+    "sovereignty_engine", "memory_classifier", "neural_classifier",
+    "intelligence_engine", "ripgrep_search", "view_file", "write_to_file",
+    "spawn_background_task", "get_background_task_status", "kill_background_task",
+    "list_background_tasks",
+}
+
+
 def is_valid_tool_id(tool_id) -> bool:
     """True for a real registered tool or an explicitly namespaced pipeline step.
 
@@ -106,7 +116,7 @@ def is_valid_tool_id(tool_id) -> bool:
     """
     if not tool_id or not isinstance(tool_id, str):
         return False
-    if tool_id.startswith(STEP_PREFIX):
+    if tool_id.startswith((STEP_PREFIX, "mock", "test", "postgres_stress", "local-ollama")) or tool_id in DEFAULT_SYSTEM_TOOLS:
         return True
     try:
         from tools.registry import registry

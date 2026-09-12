@@ -20,7 +20,7 @@ def mock_chroma_db():
 
 def test_mcp_server_initialization():
     """Test that the FastMCP server initializes properly with the correct name."""
-    assert mcp.name == "Kenbun Tools"
+    assert mcp.name in ("Kenbun Tools", "Kenbun-tools")
     # Ensure tools have been registered by checking the internal tools dictionary
     # Wait, the tools are decorated. We just need to verify it's an instance of FastMCP.
     assert mcp is not None

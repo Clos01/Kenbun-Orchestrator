@@ -13,7 +13,7 @@ graph TD
         Directive["Goal / Vision / Prompt"]
     end
 
-    subgraph KenbunCore["🏛️ Kenbun Sovereign Engine (/Users/user/Dev/Kenbun)"]
+    subgraph KenbunCore["🏛️ Kenbun Sovereign Engine (/home/user/Dev/Kenbun)"]
         Router["⚡ AI Router & Dynamic Skill Discovery"]
         
         subgraph ThreeSystems["The 3-Tier Cognitive Engine"]
@@ -72,8 +72,8 @@ Kenbun thinks in three distinct cognitive tiers to prevent the common pitfalls o
 
 A fundamental rule of Kenbun is **Workbench Decoupling**:
 
-* **Kenbun Core (`/Users/user/Dev/Kenbun`)**: This is the sovereign command center, brain health repository, and skill registry. Client production code is **never mixed directly into Kenbun's core tree**.
-* **Isolated Project Directories (`/Users/user/Dev/Projects/<app-name>`)**: Every external client app (e.g. `client-app-prod`, `enterpriseapp.ai`) maintains its own independent Git repository, `package.json`, environment variables, and Docker deployment pipelines.
+* **Kenbun Core (`/home/user/Dev/Kenbun`)**: This is the sovereign command center, brain health repository, and skill registry. Client production code is **never mixed directly into Kenbun's core tree**.
+* **Isolated Project Directories (`/home/user/Dev/Projects/<app-name>`)**: Every external client app (e.g. `client-app-prod`, `enterpriseapp.ai`) maintains its own independent Git repository, `package.json`, environment variables, and Docker deployment pipelines.
 * **Why this matters:** If a client app breaks, corrupts dependencies, or has breaking Node upgrades, **Kenbun itself remains 100% stable, secure, and unaffected**.
 
 ---

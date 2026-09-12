@@ -40,8 +40,10 @@ def test_get_db_status_reports_primary_when_postgres_succeeds():
         assert "remote_node" in status
 
 
-def test_record_db_fallback_populates_event_and_logs(caplog):
+def test_record_db_fallback_populates_event_and_logs(caplog, monkeypatch):
     """Verifies that record_db_fallback captures timestamp, operation, and logs an alert."""
+    import tools.utils.bayesian as bayesian
+    monkeypatch.setattr(bayesian, "_last_db_fallback_warn_time", 0.0)
     record_db_fallback("test_operation", "test_reason", {"foo": "bar"})
     status = get_db_status()
     last = status["last_fallback"]

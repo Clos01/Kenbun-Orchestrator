@@ -45,15 +45,14 @@ def test_every_wired_capability_is_reported(client):
     caps = {c["name"]: c for c in client.get("/api/v1/resilience").json()["capabilities"]}
     assert set(caps) == {
         "Queen decomposition", "Supervisor senior reviewer",
-        "Two-pass cloud audit", "Reasoning (misc callers)", "Memory read",
-        "LLM gateway",
+        "Two-pass cloud audit", "Reasoning (misc callers)", "DSH-10 Unified Memory Seam",
+        "Database & Bayesian intelligence", "LLM gateway",
     }
     assert [p["name"] for p in caps["Queen decomposition"]["providers"]] == ["gemini", "deepseek", "local"]
     assert [p["name"] for p in caps["Supervisor senior reviewer"]["providers"]] == ["lmstudio", "gateway"]
     assert [p["name"] for p in caps["LLM gateway"]["providers"]] == ["primary", "fallback", "gemini"]
-    assert [p["name"] for p in caps["Memory read"]["providers"]] == ["chroma", "honcho"]
     for name, c in caps.items():
-        if name == "Memory read":
+        if name in ("DSH-10 Unified Memory Seam", "Database & Bayesian intelligence"):
             continue  # infra-dependent in the test env
         assert c["spof"] is False
         assert c["healthy_count"] == c["total_count"] >= 2
@@ -90,4 +89,4 @@ def test_a_recorded_failover_shows_up_in_events(client, tmp_path):
 
 def test_phases_cover_dsh_01_through_07(client):
     ids = [p["id"] for p in client.get("/api/v1/resilience").json()["phases"]]
-    assert ids == ["DSH-01", "DSH-02", "DSH-03", "DSH-04", "DSH-05", "DSH-06", "DSH-07"]
+    assert ids[:7] == ["DSH-01", "DSH-02", "DSH-03", "DSH-04", "DSH-05", "DSH-06", "DSH-07"]

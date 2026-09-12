@@ -80,9 +80,10 @@ class TestDashboardFeatures:
         """Tests Cron scheduled jobs CRUD endpoints."""
         mock_jobs_db = tmp_path / "cron_jobs.json"
         
-        with patch("tools.infrastructure.routers.cron.DB_FILE", mock_jobs_db):
-            with patch("tools.infrastructure.routers.cron.LOCK_FILE", tmp_path / "cron_jobs.lock"):
-                # 1. Create a job
+        with patch("tools.infrastructure.routers.cron.DB_FILE", mock_jobs_db), \
+             patch("tools.infrastructure.routers.cron.LOCK_FILE", tmp_path / "cron_jobs.lock"), \
+             patch("tools.infrastructure.routers.cron.DEFAULT_CRON_JOBS", []):
+            # 1. Create a job
                 payload = {
                     "name": "Audit Logs Task",
                     "prompt": "Run security audit on logs",
