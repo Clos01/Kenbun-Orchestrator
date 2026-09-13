@@ -4,6 +4,7 @@ Provides single-token shorthand directives (!Supervisor, !Orchestrate, !timesfm,
 !vcs_qa, !bug_fix, !fable, etc.) across CLI REPL, command arguments, and FastMCP.
 """
 
+import json
 import shlex
 from typing import Tuple, Dict, Any, Optional
 
@@ -37,6 +38,11 @@ BANG_DIRECTIVES = {
     "!history": "consult_memory_archivist",
     "!memory_archivist": "consult_memory_archivist",
     "!doc": "consult_memory_archivist",
+    "!sync_hivemind": "sync_hivemind_to_master",
+    "!push_hivemind": "sync_hivemind_to_master",
+    "!inspect_bin": "inspect_local_hivemind_bin",
+    "!bin_status": "inspect_local_hivemind_bin",
+    "!purge_bin": "purge_local_hivemind_bin",
     "!help": "help",
 }
 
@@ -188,6 +194,32 @@ def dispatch_bang_command(cmd_str: str) -> str:
             from tools.specialists.pit_crew import consult_memory_archivist
             q = payload.strip() if payload else "post_mortem"
             return consult_memory_archivist(query=q)
+        except Exception as e:
+            return f"❌ {directive} dispatch failed: {e}"
+
+    if directive in ("!sync_hivemind", "!push_hivemind"):
+        try:
+            from tools.memory.hivemind_sync import sync_local_hivemind_to_master
+            dry_run = "dry" in (payload or "").lower()
+            res = sync_local_hivemind_to_master(dry_run=dry_run)
+            return json.dumps(res, indent=2)
+        except Exception as e:
+            return f"❌ {directive} dispatch failed: {e}"
+
+    if directive in ("!inspect_bin", "!bin_status"):
+        try:
+            from tools.memory.hivemind_sync import inspect_local_hivemind_bin
+            res = inspect_local_hivemind_bin()
+            return json.dumps(res, indent=2)
+        except Exception as e:
+            return f"❌ {directive} dispatch failed: {e}"
+
+    if directive == "!purge_bin":
+        try:
+            from tools.memory.hivemind_sync import purge_local_hivemind_bin
+            force = "force" in (payload or "").lower()
+            res = purge_local_hivemind_bin(force=force)
+            return json.dumps(res, indent=2)
         except Exception as e:
             return f"❌ {directive} dispatch failed: {e}"
 

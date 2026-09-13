@@ -338,11 +338,43 @@ def _make_openai_compatible_call(
         "temperature": temperature,
         "max_tokens": max_tokens
     }
+
+    # For local llama-server / MoE endpoints (e.g. Qwen 3.8 Flash Next on LG 2025),
+    # disable the verbose internal thinking monologue by default so the model responds
+    # with direct structured output in seconds instead of spending 5+ minutes in thinking.
+    is_local_endpoint = any(
+        k in base_url
+        for k in (
+            "<ORCHESTRATOR_IP>",
+            "127.0.0.1",
+            "localhost",
+            getattr(settings, "SWARM_PC_IP", "") or "",
+            ":2065",
+            ":11434",
+        )
+        if k
+    )
+    if is_local_endpoint:
+        effort = os.environ.get(
+            "SOVEREIGN_REASONING_EFFORT",
+            getattr(settings.models, "sovereign_reasoning_effort", getattr(settings, "SOVEREIGN_REASONING_EFFORT", "off"))
+        ).lower().strip()
+        if effort in ("off", "false", "none", "0"):
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+        else:
+            if effort in ("true", "1", "default", "smart"):
+                effort = "low"
+            payload["chat_template_kwargs"] = {"enable_thinking": True, "reasoning_effort": effort}
     
     response = requests.post(url, json=payload, headers=headers, timeout=settings.models.lm_studio_read_timeout)
     response.raise_for_status()
     res_json = response.json()
-    content = res_json["choices"][0]["message"]["content"]
+    msg = res_json["choices"][0]["message"]
+    content = msg.get("content")
+    if msg.get("reasoning_content"):
+        logging.debug(f"🧠 [SOVEREIGN REASONING]: {msg['reasoning_content'][:200]}...")
+    if not content:
+        content = msg.get("reasoning_content")
     
     # Dynamic Token Tracking (System 4)
     try:

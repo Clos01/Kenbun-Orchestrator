@@ -902,7 +902,10 @@ async def _run_supervisor_audit_raw(user_proposal: str, code_snippet: str = "", 
  
     # Tier 2: Cloud Escalation
     try:
-        res = await asyncio.wait_for(_tier_2_cloud(user_proposal, code_snippet, memory_context, tech_key, local_verdict), timeout=45.0)
+        res = await asyncio.wait_for(
+            _tier_2_cloud(user_proposal, code_snippet, memory_context, tech_key, local_verdict),
+            timeout=float(settings.SUPERVISOR_CLOUD_TIMEOUT),
+        )
         if res:
             # The escalation we just paid for is also the calibration evidence.
             # Every cheap verdict that was blocked from short-circuiting now gets
@@ -932,7 +935,10 @@ async def _run_supervisor_audit_raw(user_proposal: str, code_snippet: str = "", 
  
     # Tier 3: Local Senior Fallback
     try:
-        res = await asyncio.wait_for(_tier_3_fallback(user_proposal, code_snippet, memory_context), timeout=60.0)
+        res = await asyncio.wait_for(
+            _tier_3_fallback(user_proposal, code_snippet, memory_context),
+            timeout=float(settings.SUPERVISOR_FALLBACK_TIMEOUT),
+        )
         log_swarm_event("DECISION", {
             "tool": "supervisor_agent", 
             "confidence": 0.5, 

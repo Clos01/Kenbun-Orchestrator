@@ -2,7 +2,7 @@
 🏛️ Kenbun Functional Sovereign Specialists
 ============================================
 Clear, function-driven sovereign agents and diagnostic tools:
-- consult_code_diagnostician: Code fault diagnostic surgeon (Qwen 2.5 Coder 14B on LG 2025)
+- consult_code_diagnostician: Code fault diagnostic surgeon (Qwen 3.8 Flash Next 177B on LG 2025)
 - consult_cluster_monitor:    Cluster hardware nodes & background task monitor
 - consult_performance_tuner:  Bayesian confidence & tool win-rate performance tuner
 - consult_framing_sentinel:   FastMCP protocol & stdout framing isolation auditor
@@ -28,19 +28,19 @@ from tools.utils.path_utils import get_project_root
 
 logger = logging.getLogger("tools.specialists")
 
-# Dedicated LM Studio host for the Code Diagnostician (Local GPU Server)
-LG_2025_HOST = os.environ.get("LG_2025_HOST") or os.environ.get("SWARM_PC_IP") or getattr(settings, "SWARM_PC_IP", "<ORCHESTRATOR_IP>")
+# Dedicated LLM inference host for the Code Diagnostician (LG 2025 Rig - Qwen 3.8 Flash Next 177B)
+LG_2025_HOST = os.environ.get("LG_2025_HOST") or "<ORCHESTRATOR_IP>"
 DEFAULT_MEC_PORT = int(os.environ.get("LG_2025_PORT") or os.environ.get("LM_STUDIO_PORT") or getattr(settings, "LM_STUDIO_PORT", 2065) or 2065)
-DEFAULT_MEC_MODEL = os.environ.get("LG_2025_MODEL") or os.environ.get("LM_STUDIO_MODEL") or getattr(settings, "SWARM_MODEL", "qwen/qwen2.5-coder-14b") or "qwen/qwen2.5-coder-14b"
+DEFAULT_MEC_MODEL = os.environ.get("LG_2025_MODEL") or "qwen3.8-flash-next"
 
 
 def _call_lg_lmstudio(
     system_prompt: str,
     user_message: str,
     model: str = DEFAULT_MEC_MODEL,
-    timeout: float = 60.0,
+    timeout: float = 240.0,
 ) -> Optional[str]:
-    """Sends inference request to LG 2025 LM Studio with fast-fail fallback."""
+    """Sends inference request to LG 2025 LLM engine with fast-fail fallback."""
     host = LG_2025_HOST
     port = DEFAULT_MEC_PORT
     url = f"http://{host}:{port}/v1/chat/completions"
@@ -52,7 +52,8 @@ def _call_lg_lmstudio(
             {"role": "user", "content": user_message},
         ],
         "temperature": 0.2,
-        "max_tokens": 280,
+        "max_tokens": 512,
+        "chat_template_kwargs": {"enable_thinking": False},
     }
 
     try:
@@ -64,9 +65,13 @@ def _call_lg_lmstudio(
         )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             body = json.loads(resp.read().decode("utf-8"))
-            return body.get("choices", [{}])[0].get("message", {}).get("content")
+            msg = body.get("choices", [{}])[0].get("message", {})
+            content = msg.get("content")
+            if not content:
+                content = msg.get("reasoning_content")
+            return content
     except Exception as e:
-        logger.debug(f"Specialist LM Studio call failed ({url}): {e}")
+        logger.debug(f"Specialist LLM call failed ({url}): {e}")
         return None
 
 
@@ -123,12 +128,13 @@ def consult_code_diagnostician(
         user_prompt = f"ISSUE / SYMPTOM:\n{issue}\n\nCONTEXT:\n{full_context}" if full_context else f"ISSUE / SYMPTOM:\n{issue}"
 
         # 3. Query local Qwen Coder model on LG 2025
-        response = _call_lg_lmstudio(DIAGNOSTIC_SYSTEM_PROMPT, user_prompt, model=DEFAULT_MEC_MODEL, timeout=60.0)
+        diag_timeout = float(os.environ.get("LG_2025_TIMEOUT", 240.0))
+        response = _call_lg_lmstudio(DIAGNOSTIC_SYSTEM_PROMPT, user_prompt, model=DEFAULT_MEC_MODEL, timeout=diag_timeout)
 
         if response:
             return json.dumps({
                 "specialist": "code-diagnostician",
-                "engine": f"LM Studio ({DEFAULT_MEC_MODEL}) on LG 2025",
+                "engine": f"Qwen 3.8 Flash Next 177B on LG 2025 ({DEFAULT_MEC_MODEL})",
                 "diagnosis": response,
                 "status": "DIAGNOSED",
             }, indent=2)

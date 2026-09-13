@@ -14,10 +14,10 @@ from tools.infrastructure.config import settings
 logger = logging.getLogger(__name__)
 
 _circuit_open_until = 0.0
-_circuit_cooldown_seconds = 300.0  # 5 minutes backoff
+_circuit_cooldown_seconds = 30.0  # 30 seconds backoff
 _circuit_last_error = ""
 
-def _probe_tcp(host: str, port: int, timeout: float = 0.3) -> bool:
+def _probe_tcp(host: str, port: int, timeout: float = 1.0) -> bool:
     try:
         with socket.create_connection((host, int(port)), timeout=timeout):
             return True
@@ -45,7 +45,7 @@ def get_connection():
 
     host = getattr(settings, "POSTGRES_HOST", None)
     port = getattr(settings, "POSTGRES_PORT", 5432)
-    if not host or not _probe_tcp(host, port, timeout=0.3):
+    if not host or not _probe_tcp(host, port, timeout=1.0):
         _circuit_open_until = now + _circuit_cooldown_seconds
         _circuit_last_error = f"Host {host}:{port} unreachable"
         raise RuntimeError(f"PostgreSQL host {host}:{port} unreachable. Fast-failing to local SQLite.")

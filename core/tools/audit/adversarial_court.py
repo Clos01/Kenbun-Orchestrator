@@ -228,6 +228,8 @@ class AdversarialCourt:
 
         try:
             from tools.utils.llm_router import call_llm_gateway
+            call_budget = (settings.COURT_JUDGE_TIMEOUT if role == "judge"
+                           else settings.COURT_BRIEF_TIMEOUT)
             response = await asyncio.wait_for(
                 asyncio.to_thread(
                     call_llm_gateway,
@@ -235,7 +237,7 @@ class AdversarialCourt:
                     user_message=user_prompt,
                     temperature=0.3
                 ),
-                timeout=45.0
+                timeout=float(call_budget)
             )
             if response:
                 return response, "gateway"

@@ -467,9 +467,19 @@ def telemetry_integrity_audit(post_alert: bool = True) -> str:
             with open(bpath) as fh:
                 data = json.load(fh)
             hist = data.get("history", [])
-            last_ts = hist[-1].get("timestamp") if hist else None
+            last_ts = (
+                hist[-1].get("timestamp")
+                or hist[-1].get("date")
+                or data.get("last_updated")
+                if hist
+                else data.get("last_updated")
+            )
             if last_ts:
-                ts = datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
+                try:
+                    ts = datetime.fromisoformat(str(last_ts).replace("Z", "+00:00"))
+                except ValueError:
+                    # e.g. YYYY-MM-DD format
+                    ts = datetime.strptime(str(last_ts)[:10], "%Y-%m-%d")
                 if ts.tzinfo is None:
                     ts = ts.replace(tzinfo=timezone.utc)
                 age_days = (datetime.now(timezone.utc) - ts).total_seconds() / 86400.0

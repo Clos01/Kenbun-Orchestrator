@@ -234,3 +234,67 @@ def session_search(
             role_filter=role_filter
         )
         return render_search_results_markdown(res)
+
+
+@sovereign_tool()
+def sync_hivemind_to_master(dry_run: bool = False, force_all: bool = False) -> str:
+    """Synchronizes locally accumulated concepts and findings from SQLite staging to Master PostgreSQL on LG 2025."""
+    with silence_stdout():
+        from tools.memory.hivemind_sync import sync_local_hivemind_to_master as _sync
+        res = _sync(dry_run=dry_run, force_all=force_all)
+        return json.dumps(res, indent=2)
+
+
+@sovereign_tool()
+def inspect_hivemind_bin() -> str:
+    """Defensive inspection tool: audits the local staging bin BEFORE any purge action."""
+    with silence_stdout():
+        from tools.memory.hivemind_sync import inspect_local_hivemind_bin as _inspect
+        res = _inspect()
+        return json.dumps(res, indent=2)
+
+
+@sovereign_tool()
+def purge_hivemind_bin(force: bool = False, older_than_days: Optional[int] = None) -> str:
+    """Purges verified synced records from the local staging bin. Strictly blocks if unsynced data remains unless force=True."""
+    with silence_stdout():
+        from tools.memory.hivemind_sync import purge_local_hivemind_bin as _purge
+        res = _purge(force=force, older_than_days=older_than_days)
+        return json.dumps(res, indent=2)
+
+
+@sovereign_tool()
+def check_inference_engine_health() -> str:
+    """Audits live health, model slots, KV cache, and latency on the LG 2025 sovereign llama-server."""
+    with silence_stdout():
+        import requests
+        import time
+        from tools.infrastructure.config import settings
+        url = f"http://{settings.SWARM_PC_IP}:{settings.models.lm_studio_port}"
+        t0 = time.time()
+        try:
+            h_resp = requests.get(f"{url}/health", timeout=2.0)
+            latency = (time.time() - t0) * 1000
+            m_resp = requests.get(f"{url}/v1/models", timeout=2.0)
+            models = [m.get("id") for m in m_resp.json().get("data", [])] if m_resp.status_code == 200 else []
+            s_resp = requests.get(f"{url}/slots", timeout=2.0)
+            slots = s_resp.json() if s_resp.status_code == 200 else []
+            active_slots = [s for s in slots if s.get("is_processing", False)]
+            return json.dumps({
+                "status": "HEALTHY" if h_resp.status_code == 200 else "DEGRADED",
+                "endpoint": url,
+                "latency_ms": round(latency, 2),
+                "active_model": settings.models.lm_studio_model,
+                "models_available": models,
+                "total_slots": len(slots),
+                "busy_slots": len(active_slots),
+                "slot_details": slots[:2] if slots else []
+            }, indent=2)
+        except Exception as e:
+            return json.dumps({
+                "status": "UNREACHABLE",
+                "endpoint": url,
+                "error": str(e),
+                "error_code": "KB-E101"
+            }, indent=2)
+

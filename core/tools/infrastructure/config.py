@@ -53,6 +53,7 @@ class ModelSettings(BaseModel):
     deepseek_model: str = "deepseek-chat"
     lm_studio_connect_timeout: float = 3.0
     lm_studio_read_timeout: float = 60.0
+    sovereign_reasoning_effort: str = "off"
     ollama_pull_models: str = "qwen2.5:1.5b"
     primary_llm_model: str = "qwen2.5:1.5b"  # Set by bootstrap.py wizard
     openai_runtime: str = "auto"
@@ -240,6 +241,7 @@ class KenbunSettings(BaseSettings):
     DAILY_BUDGET: float = Field(default=50.00, validation_alias="DAILY_BUDGET", gt=0.0)
     LM_STUDIO_CONNECT_TIMEOUT: float = Field(default=3.0)
     LM_STUDIO_READ_TIMEOUT: float = Field(default=60.0)
+    SOVEREIGN_REASONING_EFFORT: str = Field(default="off")
     OLLAMA_PULL_MODELS: str = "qwen2.5:1.5b"
     PRIMARY_LLM_URL: Optional[str] = None
     PRIMARY_LLM_MODEL: str = "qwen2.5:1.5b"
@@ -341,6 +343,7 @@ class KenbunSettings(BaseSettings):
             deepseek_model=self.DEEPSEEK_MODEL,
             lm_studio_connect_timeout=self.LM_STUDIO_CONNECT_TIMEOUT,
             lm_studio_read_timeout=self.LM_STUDIO_READ_TIMEOUT,
+            sovereign_reasoning_effort=self.SOVEREIGN_REASONING_EFFORT,
             ollama_pull_models=self.OLLAMA_PULL_MODELS,
             openai_runtime=self.OPENAI_RUNTIME
         )

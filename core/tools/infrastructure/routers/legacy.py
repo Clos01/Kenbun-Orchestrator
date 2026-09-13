@@ -17,7 +17,6 @@ import re
 import json
 import time
 import socket
-import random
 import asyncio
 import logging
 import collections
